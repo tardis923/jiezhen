@@ -1,0 +1,1031 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="robots" content="noindex,nofollow">
+<title>数字闪电 · 按顺序点数字</title>
+<style>
+  :root{
+    --bg:#0d1020; --panel:#171c33; --panel2:#1e2440; --line:#2b3358;
+    --txt:#e8ecff; --dim:#8b93b8; --accent:#6ea8ff;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;}
+  body{
+    margin:0; background:radial-gradient(1200px 700px at 50% -10%, #1b2450, #0d1020 60%);
+    color:var(--txt); font-family:"PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    overflow:hidden; user-select:none; -webkit-user-select:none; -webkit-touch-callout:none;
+    touch-action:manipulation; overscroll-behavior:none;
+  }
+  #app{height:100%; display:flex; flex-direction:column; padding:4px 12px 1px;}
+  header{flex:0 0 auto; display:flex; align-items:center; gap:14px; padding:0 4px 4px;}
+  .title{display:flex; align-items:baseline; gap:12px;}
+  .title h1{margin:0; font-size:26px; letter-spacing:2px; font-weight:800;}
+  .title h1 small{font-size:14px; font-weight:600; color:var(--dim); letter-spacing:1px;}
+  .ctrl{display:flex; align-items:center; gap:10px; margin-left:auto;}
+  #status{font-size:15px; color:var(--dim); min-width:160px; text-align:right;}
+  button{
+    font-family:inherit; font-size:16px; font-weight:700; color:#fff; cursor:pointer;
+    background:linear-gradient(180deg,#3b4e80,#2a3760); border:1px solid #4b5f96;
+    padding:9px 18px; border-radius:12px; touch-action:none;
+  }
+  button:disabled{opacity:.45; cursor:default;}
+  button.primary{background:linear-gradient(180deg,#3f7fe0,#2a5cb8); border-color:#6ea8ff;}
+  button.ghost{padding:7px 13px; font-size:14px; background:linear-gradient(180deg,#2b3358,#1d2340); border-color:#3f4a78;}
+  button.warn{background:linear-gradient(180deg,#a33f3f,#7c2a2a); border-color:#e07474;}
+  #boards{flex:1; display:grid; grid-template-columns:repeat(4,1fr); gap:12px; min-height:0;}
+  .panel{
+    background:linear-gradient(180deg,var(--panel2),var(--panel)); border:1px solid var(--line);
+    border-radius:18px; padding:7px 10px 3px; display:flex; flex-direction:column; min-height:0; min-width:0;
+    position:relative; overflow:hidden;
+  }
+  .phead{flex:0 0 auto; display:flex; align-items:center; gap:8px; padding:0 4px 4px;}
+  .pname{font-size:20px; font-weight:800; letter-spacing:1px;}
+  .prog{display:flex; gap:7px; width:100%; padding:0 2px;}
+  .seg{
+    flex:1 1 0; height:clamp(18px,3.2vh,32px); border-radius:10px; background:#232a49; border:1px solid #39426e;
+    display:flex; align-items:center; justify-content:center;
+    font-size:14px; font-weight:800; color:#626b93;
+  }
+  .seg.done{background:linear-gradient(180deg,#43c982,#268a56); border-color:#5ce08a; color:#eafff1;}
+  .seg.now{background:linear-gradient(180deg,#ffe07a,#e2ab2c); border-color:#fff0b8; color:#3a2a00; box-shadow:0 0 20px #ffd16666;}
+  .time{
+    font-variant-numeric:tabular-nums; font-size:clamp(38px,7.4vh,86px); font-weight:900;
+    color:#cfe0ff; letter-spacing:2px; line-height:1; text-shadow:0 4px 20px #0008;
+  }
+  .time.small{font-size:clamp(22px,3.4vh,38px); color:#ffe7a3; letter-spacing:1px;}
+  .stage-info{display:flex; align-items:center; justify-content:center; gap:18px; padding:0 4px;}
+  .round-label{font-size:18px; font-weight:700; color:#9fb4ff;}
+  .left-nums{font-size:19px; font-weight:800; color:#8fd8ad; font-variant-numeric:tabular-nums; white-space:nowrap;}
+  .left-nums b{font-size:24px; color:#ffd166;}
+  .left-nums.zero{color:#5ce08a;}
+  .left-nums.zero b{color:#5ce08a;}
+  .next-num{
+    font-size:clamp(17px,2.4vh,26px); font-weight:800; color:#ffd166; letter-spacing:1px; white-space:nowrap;
+  }
+  .next-num em{font-style:normal; font-size:1.35em; color:#ffe7a3;}
+  .boardwrap{flex:1; display:flex; align-items:flex-end; justify-content:center; min-height:0; position:relative;}
+  .grid{
+    display:grid; gap:6px; border-radius:14px; background:#0f1428; padding:6px;
+    position:relative; z-index:2; transition:filter .25s;
+  }
+  .grid.hide-layout{filter:blur(10px) saturate(.5) brightness(.42);}
+  .cellbtn{
+    border-radius:12px; font-family:inherit; font-size:inherit; font-weight:800; color:#dfe8ff;
+    background:linear-gradient(180deg,#2b3358,#1e2440); border:1px solid #39456f;
+    display:flex; align-items:center; justify-content:center; padding:0; line-height:1;
+    transition:background .18s, border-color .18s, color .18s, opacity .18s;
+  }
+  .cellbtn.ok{
+    background:linear-gradient(180deg,#1c4030,#13291f); border-color:#3d7d5b; color:#6fbf93; opacity:.42;
+  }
+  .cellbtn.bad{
+    background:linear-gradient(180deg,#5b2028,#3d161c); border-color:#c0525e; color:#ffd0d5;
+    animation:shake .3s ease;
+  }
+  @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-4px)}50%{transform:translateX(4px)}75%{transform:translateX(-3px)}}
+  .badge{
+    position:absolute; left:50%; bottom:10px; transform:translateX(-50%) scale(.92);
+    display:flex; flex-direction:column; align-items:center; gap:6px; padding:16px 20px; border-radius:16px;
+    background:linear-gradient(180deg,#2f3d6e,#222c52); color:#eaf1ff; border:1px solid #5f72ad;
+    box-shadow:0 10px 30px #0007; opacity:0; transition:opacity .25s, transform .25s;
+    min-width:72%; max-width:96%; text-align:center;
+  }
+  /* 完成态：计时收起（成绩在结算框里），结算框居中占位 */
+  .stage.done .time{display:none;}
+  .stage.done .badge{position:static; left:auto; bottom:auto; transform:none; opacity:1;}
+  .badge.show{opacity:1; transform:translateX(-50%) scale(1);}
+  .badge .b1{font-size:44px; font-weight:800; letter-spacing:2px; line-height:1.05; color:#ffe7a3;}
+  .badge .b2{font-size:26px; font-weight:700; color:#cfe0ff; font-variant-numeric:tabular-nums;}
+  .badge .b3{font-size:15px; font-weight:600; color:#9fb4ff;}
+  .stage{
+    position:absolute; left:0; right:0; top:0; display:flex; flex-direction:column;
+    align-items:center; justify-content:space-between; gap:clamp(8px,1.8vh,20px); pointer-events:none; z-index:0;
+    padding:clamp(4px,1.2vh,14px) 2px 6px; overflow:hidden;
+  }
+  .stage-low{display:flex; flex-direction:column; align-items:center; gap:clamp(6px,1.2vh,14px); width:100%;}
+  .stage-tip{font-size:13px; color:#6b749b; letter-spacing:1px; text-align:center; line-height:1.5;}
+  .stage.done .prog, .stage.done .stage-low{display:none;}
+  .stage.done{justify-content:center; padding-top:0;}
+  .stage.done .stage-low{gap:0;}
+  .grid.dim{opacity:.26; filter:saturate(.35) brightness(.75);}
+  .stage .count{position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);}
+  .ready-btn{
+    pointer-events:auto; font-size:32px; font-weight:800; letter-spacing:3px;
+    padding:18px 52px; border-radius:18px;
+    background:linear-gradient(180deg,#3f7fe0,#2a5cb8); border:1px solid #6ea8ff;
+    box-shadow:0 10px 28px #000a;
+  }
+  .ready-btn.on{
+    background:linear-gradient(180deg,#2f9c64,#1e6f47); border-color:#5ce08a; color:#dcffe9;
+    box-shadow:0 0 18px #5ce08a55;
+  }
+  .cover{
+    position:absolute; left:50%; transform:translateX(-50%); bottom:0;
+    display:flex; align-items:center; justify-content:center; pointer-events:none; z-index:4;
+  }
+  .count{
+    display:none; font-size:132px; font-weight:800; line-height:1; color:#ffd166;
+    text-shadow:0 6px 26px #0009;
+  }
+  .count.show{display:block;}
+  .stage.cd .prog, .stage.cd .time, .stage.cd .stage-low, .stage.cd .ready-btn{display:none;}
+  .flash{animation:flash .5s ease;}
+  @keyframes flash{0%{box-shadow:0 0 0 0 #5ce08a00;} 30%{box-shadow:0 0 0 4px #5ce08a55;} 100%{box-shadow:0 0 0 0 #5ce08a00;}}
+  footer{flex:0 0 auto; display:flex; align-items:center; justify-content:space-between; gap:18px; padding:2px 4px 0; color:var(--dim); font-size:13px; line-height:1.35;}
+  #board-list{flex:1; text-align:center; font-size:16px; color:#cfe0ff;}
+  .hint{font-size:13px; color:#6f78a0;}
+
+  /* ---------- 演示 ---------- */
+  #demo{
+    position:fixed; inset:0; z-index:50; display:none; align-items:center; justify-content:center;
+    background:rgba(6,8,18,.94);
+  }
+  #demo.show{display:flex;}
+  .demo-box{
+    display:flex; flex-direction:column; align-items:center; gap:14px;
+    padding:16px 28px 18px; border-radius:24px;
+    background:linear-gradient(180deg,#1c2549,#141a30); border:1px solid #3f4d80;
+    box-shadow:0 26px 70px #000c;
+  }
+  .demo-title{font-size:25px; font-weight:800; letter-spacing:4px; color:#dfe8ff;}
+  #demoGrid{
+    width:min(46vh,440px); height:min(46vh,440px);
+    display:grid; grid-template-columns:repeat(4,1fr); gap:8px; padding:8px;
+    border-radius:16px; background:#0f1428; box-shadow:0 10px 34px #0008, inset 0 0 0 1px #2a3358;
+  }
+  #demoGrid div{
+    border-radius:10px; display:flex; align-items:center; justify-content:center;
+    font-size:clamp(20px,3.4vh,32px); font-weight:800;
+    background:linear-gradient(180deg,#2b3358,#1e2440); border:1px solid #39456f; color:#8b93b8;
+    transition:background .2s, color .2s, transform .2s;
+  }
+  #demoGrid div.on{
+    background:linear-gradient(180deg,#4b8ae8,#2a5cb8); border-color:#8fc0ff; color:#fff;
+    transform:scale(1.06); box-shadow:0 0 18px #6ea8ff88;
+  }
+  .demo-tip{font-size:23px; font-weight:700; color:#ffd166; letter-spacing:1px; height:32px; line-height:32px; white-space:nowrap;}
+  .demo-foot{display:flex; align-items:center; gap:14px;}
+  .demo-foot button{font-size:19px; padding:12px 24px;}
+  #demoReplay{padding:12px 22px;}
+
+  /* ---------- 姓名 / 榜单 ---------- */
+  .name-slot{
+    font-family:inherit; background:transparent; border:1px dashed #4d5b8f; color:#9fb4ff;
+    font-size:17px; font-weight:800; letter-spacing:1px; padding:3px 12px; border-radius:10px;
+    max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .name-slot.sel{ border:1px solid #5ce08a; background:#173627; color:#dcffe9; }
+  .namepop{
+    position:absolute; left:6px; right:6px; top:2px; bottom:2px; z-index:7; display:none;
+    flex-direction:column; padding:8px 8px 6px; border-radius:14px;
+    background:linear-gradient(180deg,#1f2747,#161b2f); border:1px solid #3f4d80;
+    box-shadow:0 14px 40px #000b;
+  }
+  .namepop.show{ display:flex; }
+  .namepop-head{ display:flex; align-items:center; justify-content:space-between; padding:0 2px 6px; }
+  .namepop-head span{ font-size:14px; color:#9fb4ff; font-weight:700; }
+  .namepop-head button{ font-size:13px; padding:3px 10px; border-radius:8px; }
+  .namepop-list{
+    flex:1; min-height:0; overflow-y:auto; display:grid; gap:6px; align-content:start;
+    grid-template-columns:repeat(3,1fr); touch-action:pan-y;
+  }
+  .namepop-list button{ font-size:15px; padding:8px 2px; border-radius:9px; background:#242d4f; border:1px solid #38426e; }
+  .namepop-list button.taken{ opacity:.3; }
+  .namepop-empty{ font-size:14px; color:#7d86ac; padding:10px 4px; line-height:1.7; grid-column:1/-1; }
+  .namepop-own{ grid-column:1/-1; display:flex; gap:6px; margin-top:4px; }
+  .namepop-own input{
+    flex:1; min-width:0; font-family:inherit; font-size:15px; padding:7px 10px; border-radius:9px;
+    background:#10152a; border:1px solid #3f4d80; color:#e8ecff;
+  }
+  .namepop-own button{ font-size:15px; padding:7px 12px; border-radius:9px; }
+
+  .rank-list{ display:flex; flex-direction:column; gap:6px; overflow-y:auto; min-height:0; touch-action:pan-y; }
+  .rank-head{
+    display:grid; grid-template-columns:46px 1fr 78px 66px 104px 150px; align-items:center; gap:8px;
+    padding:2px 12px 4px; font-size:13px; color:#7d86ac; letter-spacing:1px;
+    border-bottom:1px solid #2a3358; margin-bottom:2px;
+  }
+  .rank-head div:nth-child(3), .rank-head div:nth-child(4){ text-align:center; }
+  .rank-head div:nth-child(5), .rank-head div:nth-child(6){ text-align:right; }
+  .rank-row{
+    display:grid; grid-template-columns:46px 1fr 78px 66px 104px 150px; align-items:center; gap:8px;
+    padding:9px 12px; border-radius:12px; background:#1a2140; border:1px solid #2a3358; font-size:18px;
+  }
+  .rank-no{ font-size:19px; font-weight:800; color:#8b93b8; text-align:center; }
+  .rank-no.top0{ color:#ffd166; } .rank-no.top1{ color:#d8e2ff; } .rank-no.top2{ color:#ffb26b; }
+  .rank-name{ font-weight:800; color:#eaf1ff; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .rank-time{ font-variant-numeric:tabular-nums; font-weight:800; color:#9fd8ff; text-align:right; }
+  .rank-class{ font-size:15px; color:#8b93b8; text-align:center; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .rank-clear{ font-size:15px; color:#8b93b8; text-align:center; }
+  .rank-miss{ font-size:15px; color:#8b93b8; text-align:center; }
+  .rank-date{ font-size:14px; color:#8b93b8; text-align:right; font-variant-numeric:tabular-nums; }
+  .rank-empty{ padding:40px 10px; text-align:center; font-size:17px; color:#6f78a0; }
+  .rank-tabs{ display:flex; gap:10px; }
+  .rank-tabs button{ font-size:15px; padding:7px 16px; border-radius:10px; }
+  .rank-tabs button.on{ background:linear-gradient(180deg,#3f7fe0,#2a5cb8); border-color:#6ea8ff; }
+  .rank-tabs button[disabled]{ opacity:.4; }
+
+  #boardLayer, #nameLayer{
+    position:fixed; inset:0; z-index:60; display:none; align-items:center; justify-content:center;
+    background:rgba(6,8,18,.95);
+  }
+  #boardLayer.show, #nameLayer.show{ display:flex; }
+  .board-box, .name-box{
+    display:flex; flex-direction:column; gap:12px; width:min(920px,92vw); max-height:88vh;
+    padding:18px 22px 16px; border-radius:22px; background:linear-gradient(180deg,#1c2549,#141a30);
+    border:1px solid #3f4d80; box-shadow:0 26px 70px #000c;
+  }
+  .board-box h3, .name-box h3{ margin:0; font-size:24px; letter-spacing:3px; color:#dfe8ff; }
+  .board-foot{ display:flex; align-items:center; gap:10px; }
+  .board-foot span{ flex:1; font-size:13px; color:#6f78a0; line-height:1.5; }
+  .name-box textarea{
+    width:100%; height:38vh; resize:none; font-family:inherit; font-size:16px; line-height:1.8;
+    padding:12px 14px; border-radius:14px; background:#10152a; border:1px solid #3f4d80; color:#e8ecff;
+  }
+  .name-box p{ margin:0; font-size:14px; color:#8b93b8; line-height:1.6; }
+  .name-foot{ display:flex; align-items:center; gap:10px; }
+  .name-foot span{ flex:1; font-size:14px; color:#9fb4ff; }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <button id="btnFull" class="ghost">全屏</button>
+    <button id="btnDemo" class="ghost">演示</button>
+    <button id="btnRestart" class="ghost">重新开始</button>
+    <button id="btnNext" class="ghost">换一组</button>
+    <button id="btnNames" class="ghost">名单</button>
+    <button id="btnRank" class="ghost">排行榜</button>
+    <div class="title"><h1>数字闪电 <small>3 关 · 4×4 → 5×5 → 6×6<span id="classTag"></span></small></h1></div>
+    <div class="ctrl"><span id="status">先选姓名，再按格子上的「开始」</span></div>
+  </header>
+  <main id="boards"></main>
+  <footer>
+    <span class="hint">四人的数字位置各不相同 · 从 1 顺序点到最后一个 · 点错记一次</span>
+    <div id="board-list">完成 3 关后显示本局名次</div>
+    <span class="hint">空格 = 四人同时就位 · 刷新页面 = 换新布局</span>
+  </footer>
+</div>
+
+<div id="demo">
+  <div class="demo-box">
+    <div class="demo-title">玩法演示</div>
+    <div id="demoGrid"></div>
+    <div class="demo-tip" id="demoTip">按 1、2、3…… 的顺序点格子</div>
+    <div class="demo-foot">
+      <button id="demoReplay" class="ghost">重播</button>
+      <button id="demoClose" class="primary">知道了，开始玩</button>
+    </div>
+  </div>
+</div>
+
+<div id="boardLayer">
+  <div class="board-box">
+    <h3>排行榜 · 前 10 名</h3>
+    <div class="rank-tabs" id="rankTabs">
+      <button data-tab="all" class="on">全部班级</button>
+      <button data-tab="cls">本班</button>
+    </div>
+    <div class="rank-head">
+      <div>名次</div><div>姓名</div><div>班级</div><div>关数</div><div>用时</div><div>时间</div>
+    </div>
+    <div class="rank-list" id="rankList"></div>
+    <div class="board-foot">
+      <span id="rankNote"></span>
+      <button id="rankRefresh" class="ghost">刷新</button>
+      <button id="rankClose" class="primary">关闭</button>
+    </div>
+  </div>
+</div>
+
+<div id="nameLayer">
+  <div class="name-box">
+    <h3>班级名单</h3>
+    <p>每行一个名字，或用逗号分隔。名单只保存在这台电脑上，不会上传，与《四人解阵》共用同一份。</p>
+    <textarea id="nameInput" placeholder="张三&#10;李四&#10;王五"></textarea>
+    <div class="name-foot">
+      <span id="nameCount"></span>
+      <button id="nameClose" class="ghost">关闭</button>
+      <button id="nameSave" class="primary">保存名单</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ======================= 基础 =======================
+const ROUNDS = [{ n: 4 }, { n: 5 }, { n: 6 }];   // 三关：4×4 → 5×5 → 6×6
+const PLAYER_NAMES = ['玩家 1', '玩家 2', '玩家 3', '玩家 4'];
+const CLASS_CODE = (new URLSearchParams(location.search).get('c') || '').trim();
+
+const app = {
+  started: false, t0: 0, raf: 0,
+  phase: 'ready',      // ready（等四人）→ countdown（3 秒）→ play
+  cdTimer: 0,
+  sessionId: '',
+  players: [],
+};
+
+const boardsEl = document.getElementById('boards');
+const statusEl = document.getElementById('status');
+const listEl = document.getElementById('board-list');
+const btnFull = document.getElementById('btnFull');
+const btnDemo = document.getElementById('btnDemo');
+const btnRestart = document.getElementById('btnRestart');
+const btnNext = document.getElementById('btnNext');
+
+function uuid() {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+    const r = Math.random() * 16 | 0;
+    return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+  });
+}
+const esc = s => String(s == null ? '' : s)
+  .replace(/&/g, '&amp;')
+  .replace(/</g, '&lt;')
+  .replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;')
+  .replace(/'/g, '&#39;');
+function fmt(ms) {
+  const t = Math.max(0, ms) / 1000;
+  const m = Math.floor(t / 60);
+  const s = t - m * 60;
+  return String(m).padStart(2, '0') + ':' + (s < 10 ? '0' : '') + s.toFixed(1);
+}
+function dateFull(s) {
+  const d = new Date(s);
+  if (isNaN(d)) return '';
+  const pad = n => String(n).padStart(2, '0');
+  return d.getFullYear() + '年' + (d.getMonth() + 1) + '月' + d.getDate() + '日 ' +
+    pad(d.getHours()) + ':' + pad(d.getMinutes());
+}
+
+// 洗牌：1..n² 随机分布（每人的位置都不同）
+function shuffleNums(n, total) {
+  const totalCells = n * n;
+  const a = Array.from({ length: totalCells }, (_, i) => i + 1);
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+// ======================= 面板 =======================
+function makePlayer(i) {
+  const panel = document.createElement('div');
+  panel.className = 'panel';
+  panel.innerHTML = `
+    <div class="phead">
+      <button class="pname name-slot">＋ 选姓名</button>
+    </div>
+    <div class="boardwrap">
+      <div class="stage">
+        <div class="prog">${ROUNDS.map((_, k) => `<div class="seg"><span>${k + 1}</span></div>`).join('')}</div>
+        <div class="time">00:00.0</div>
+        <div class="stage-low">
+          <div class="stage-info">
+            <div class="round-label">第 1/3 关 · 4×4</div>
+            <div class="left-nums">还剩 <b>16</b> 个</div>
+          </div>
+          <div class="next-num">下一个：<em>1</em></div>
+          <div class="stage-tip">找到数字，点它 · 点错会记一次</div>
+        </div>
+        <div class="badge"></div>
+        <div class="count"></div>
+      </div>
+      <div class="grid"></div>
+      <div class="cover"><button class="ready-btn">开始</button></div>
+      <div class="namepop">
+        <div class="namepop-head"><span>点自己的名字</span><button class="ghost namepop-x">关闭</button></div>
+        <div class="namepop-list"></div>
+      </div>
+    </div>`;
+  boardsEl.appendChild(panel);
+
+  const p = {
+    i, panel,
+    gridEl: panel.querySelector('.grid'),
+    stage: panel.querySelector('.stage'),
+    readyBtn: panel.querySelector('.ready-btn'),
+    cover: panel.querySelector('.cover'),
+    countEl: panel.querySelector('.count'),
+    segs: [...panel.querySelectorAll('.seg')],
+    timeEl: panel.querySelector('.time'),
+    roundEl: panel.querySelector('.round-label'),
+    leftEl: panel.querySelector('.left-nums'),
+    nextEl: panel.querySelector('.next-num'),
+    tipEl: panel.querySelector('.stage-tip'),
+    badge: panel.querySelector('.badge'),
+    nameSlot: panel.querySelector('.name-slot'),
+    namePop: panel.querySelector('.namepop'),
+    playerName: '',
+    n: 4, size: 300, cell: 70,
+    round: 0,
+    cur: 1,           // 该点的数字
+    miss: 0,
+    doneSet: new Set(),
+    cells: [],        // 每格的 DOM，按数字索引（1..n²）
+    laps: [],         // 每关用时
+    ready: false,
+    finished: false, finishTime: 0, rank: 0,
+  };
+
+  p.nameSlot.addEventListener('click', () => {
+    if (app.phase !== 'ready') return;
+    openNamePop(p);
+  });
+  p.namePop.querySelector('.namepop-x').addEventListener('click', () => closeNamePop(p));
+  p.readyBtn.addEventListener('click', () => setReady(p));
+
+  const ro = new ResizeObserver(() => fitGrid(p));
+  ro.observe(panel.querySelector('.boardwrap'));
+  app.players.push(p);
+  return p;
+}
+
+// 棋盘按面板宽度/高度取正方形，贴底摆放；上方剩余空间给 HUD
+function fitGrid(p) {
+  const wrap = p.panel.querySelector('.boardwrap');
+  const w = wrap.clientWidth, h = wrap.clientHeight;
+  const s = Math.max(140, Math.min(w, h) - 4);
+  p.size = s;
+  p.cell = s / p.n;
+  p.gridEl.style.width = s + 'px';
+  p.gridEl.style.height = s + 'px';
+  p.gridEl.style.fontSize = Math.round(s / p.n * 0.42) + 'px';
+  p.gridEl.style.gap = Math.max(4, Math.round(s / p.n * 0.08)) + 'px';
+  p.cover.style.width = s + 'px';
+  p.cover.style.height = s + 'px';
+  p.stage.style.height = Math.max(0, h - s) + 'px';
+}
+
+function loadRound(p, round) {
+  const { n } = ROUNDS[round];
+  p.round = round;
+  p.n = n;
+  p.cur = 1;
+  p.doneSet = new Set();
+  p.cells = [];
+  p.badge.classList.remove('show');
+  p.stage.classList.remove('done');
+  p.gridEl.classList.remove('dim');
+
+  const nums = shuffleNums(n);
+  p.gridEl.style.gridTemplateColumns = `repeat(${n},1fr)`;
+  p.gridEl.innerHTML = '';
+  const frag = document.createDocumentFragment();
+  for (const num of nums) {
+    const b = document.createElement('button');
+    b.className = 'cellbtn';
+    b.type = 'button';
+    b.textContent = num;
+    b.dataset.num = num;
+    b.addEventListener('pointerdown', e => { e.preventDefault(); tapCell(p, num, b); });
+    p.cells[num] = b;
+    frag.appendChild(b);
+  }
+  p.gridEl.appendChild(frag);
+
+  p.roundEl.textContent = `第 ${round + 1}/${ROUNDS.length} 关 · ${n}×${n}`;
+  p.segs.forEach((d, k) => { d.className = 'seg' + (k < round ? ' done' : k === round ? ' now' : ''); });
+  p.tipEl.textContent = '找到数字，点它 · 点错会记一次';
+  updateHud(p);
+  fitGrid(p);
+}
+
+function updateHud(p) {
+  const total = p.n * p.n;
+  const left = total - (p.cur - 1);
+  p.leftEl.innerHTML = `还剩 <b>${left}</b> 个`;
+  p.leftEl.classList.toggle('zero', left === 0);
+  p.nextEl.innerHTML = p.cur > total ? '本关完成 ✓' : `下一个：<em>${p.cur}</em>`;
+}
+
+// 点格子：按顺序才算对，点错只记一次、不前进
+function tapCell(p, num, btn) {
+  if (app.phase !== 'play' || p.finished) return;
+  if (p.doneSet.has(num)) return;                       // 已点过的格子不再算
+  if (num === p.cur) {
+    p.doneSet.add(num);
+    btn.classList.add('ok');
+    btn.disabled = true;
+    p.cur++;
+    updateHud(p);
+    if (p.cur > p.n * p.n) nextRound(p);
+    return;
+  }
+  p.miss++;
+  btn.classList.add('bad');
+  setTimeout(() => btn.classList.remove('bad'), 320);
+}
+
+function nextRound(p) {
+  const now = performance.now();
+  const prev = p.laps.reduce((a, b) => a + b, 0);
+  p.laps.push(Math.round(now - app.t0 - prev));
+  if (p.round < ROUNDS.length - 1) {
+    p.panel.classList.remove('flash');
+    void p.panel.offsetWidth;
+    p.panel.classList.add('flash');
+    const doneLap = p.laps[p.laps.length - 1];
+    loadRound(p, p.round + 1);
+    p.tipEl.textContent = `上一关 ${fmt(doneLap)} · 继续找 ${p.cur}`;
+    return;
+  }
+  finishPlayer(p);
+}
+
+function finishPlayer(p) {
+  p.finished = true;
+  p.finishTime = Math.round(performance.now() - app.t0);
+  p.rank = app.players.filter(q => q.finished).length;
+  p.timeEl.textContent = fmt(p.finishTime);
+  p.timeEl.className = 'time small';
+  const prevBest = p.rank > 1
+    ? app.players.filter(q => q.finished).sort((a, b) => a.finishTime - b.finishTime)[p.rank - 2]
+    : null;
+  const gap = prevBest ? p.finishTime - prevBest.finishTime : 0;
+  const gapTxt = gap > 300 ? `距上一名 ${fmt(gap)} · ` : '';
+  const missTxt = p.miss === 0 ? '零失误' : `点错 ${p.miss} 次`;
+  p.badge.innerHTML = `<div class="b1">第 ${p.rank} 名</div>
+    <div class="b2">${fmt(p.finishTime)}</div>
+    <div class="b3">${gapTxt}${missTxt}</div>`;
+  p.badge.classList.add('show');
+  p.stage.classList.add('done');
+  p.gridEl.classList.add('dim');
+  updateBoardList();
+  saveScore(p);
+  uploadScore(p);
+  if (p.rank === 1) statusEl.textContent = '有人完成了！';
+}
+
+function updateBoardList() {
+  const nameOf = p => p.playerName || PLAYER_NAMES[p.i];
+  const fin = app.players.filter(p => p.finished).sort((a, b) => a.finishTime - b.finishTime);
+  const rest = app.players.filter(p => !p.finished);
+  if (!fin.length) { listEl.textContent = '完成 3 关后显示本局名次'; return; }
+  const parts = fin.map((p, i) => `${i + 1}. ${nameOf(p)} ${fmt(p.finishTime)}（错 ${p.miss}）`);
+  const tail = rest.length ? `　｜　进行中：${rest.map(nameOf).join('、')}` : '';
+  listEl.textContent = parts.join('　') + tail;
+}
+
+// ---------- 准备 → 倒计时 → 开始 ----------
+function applyPhaseVisual() {
+  const prep = app.phase === 'ready';
+  app.players.forEach(p => {
+    p.cover.style.display = prep ? '' : 'none';
+    p.gridEl.classList.toggle('hide-layout', prep);
+  });
+}
+
+function resetPanel(p) {
+  p.finished = false; p.finishTime = 0; p.rank = 0; p.ready = false;
+  p.laps = []; p.miss = 0; p.cur = 1;
+  p.badge.classList.remove('show');
+  p.stage.classList.remove('done');
+  p.countEl.classList.remove('show');
+  p.stage.classList.remove('cd');
+  p.readyBtn.style.display = '';
+  p.readyBtn.disabled = false;
+  p.readyBtn.textContent = '开始';
+  p.readyBtn.classList.remove('on');
+  p.timeEl.className = 'time';
+  p.timeEl.textContent = '00:00.0';
+  loadRound(p, 0);
+}
+
+function armGame() {
+  app.sessionId = uuid();
+  app.phase = 'ready';
+  app.started = false;
+  app.t0 = 0;
+  if (app.cdTimer) { clearTimeout(app.cdTimer); app.cdTimer = 0; }
+  app.players.forEach(resetPanel);
+  applyPhaseVisual();
+  statusEl.textContent = '先选姓名，再按格子上的「开始」';
+  updateBoardList();
+}
+
+function readyCount() { return app.players.filter(p => p.ready).length; }
+
+function setReady(p) {
+  if (app.phase !== 'ready' || p.ready) return;
+  if (!p.playerName) {
+    openNamePop(p);
+    statusEl.textContent = '先点面板上方选自己的姓名';
+    return;
+  }
+  p.ready = true;
+  p.readyBtn.textContent = '已准备 ✓';
+  p.readyBtn.classList.add('on');
+  p.readyBtn.disabled = true;
+  const n = readyCount();
+  statusEl.textContent = `已就位 ${n}/${app.players.length}`;
+  if (n === app.players.length) beginCountdown();
+}
+
+function beginCountdown() {
+  app.phase = 'countdown';
+  applyPhaseVisual();
+  let n = 3;
+  const paint = v => {
+    app.players.forEach(p => {
+      p.stage.classList.add('cd');
+      p.countEl.textContent = v;
+      p.countEl.classList.add('show');
+    });
+  };
+  paint(n);
+  statusEl.textContent = '3 秒后开始…';
+  const step = () => {
+    n--;
+    if (n > 0) { paint(n); statusEl.textContent = `${n} 秒后开始…`; app.cdTimer = setTimeout(step, 1000); return; }
+    startPlay();
+  };
+  app.cdTimer = setTimeout(step, 1000);
+}
+
+function startPlay() {
+  app.cdTimer = 0;
+  app.phase = 'play';
+  app.started = true;
+  app.t0 = performance.now();
+  applyPhaseVisual();
+  app.players.forEach(p => {
+    p.countEl.classList.remove('show');
+    p.stage.classList.remove('cd');
+    p.ready = false;
+    p.timeEl.className = 'time';
+    p.timeEl.textContent = '00:00.0';
+  });
+  statusEl.textContent = '计时中…';
+  updateBoardList();
+  if (!app.raf) app.raf = requestAnimationFrame(tick);
+}
+
+function tick() {
+  app.raf = requestAnimationFrame(tick);
+  if (!app.started) return;
+  const el = performance.now() - app.t0;
+  let done = 0;
+  for (const p of app.players) {
+    if (p.finished) { done++; continue; }
+    p.timeEl.textContent = fmt(el);
+  }
+  if (done === app.players.length) statusEl.textContent = '全部完成！点「换一组」换下一批同学';
+  else if (done > 0) statusEl.textContent = `已完成 ${done}/${app.players.length}`;
+  else statusEl.textContent = '计时中…';
+}
+
+// ---------- 榜单：云端优先，云端不可用时退回本机 ----------
+const SB_URL = 'https://ixnuxflxdthnismazwvd.supabase.co/rest/v1';
+const SB_KEY = 'sb_publishable_GZaeyxzqRbkPMy8QkV5qlA_hT8tHsWs';
+const GAME = 'shandian';
+const maskName = n => { const s = String(n || ''); return s.length <= 1 ? (s || '—') : s[0] + '＊'; };
+
+// 本机成绩：云端没开通时兜底，也方便老师当场看
+const RANK_KEY = 'sz_rank_' + (CLASS_CODE || 'home');
+function getRank() {
+  try { const a = JSON.parse(localStorage.getItem(RANK_KEY) || '[]'); return Array.isArray(a) ? a : []; }
+  catch (e) { return []; }
+}
+function saveScore(p) {
+  if (!CLASS_CODE) return;              // 无班级参数时只做练习，不入榜
+  const rows = getRank();
+  rows.push({
+    name: p.playerName || '匿名',
+    ms: p.finishTime,
+    miss: p.miss,
+    at: Date.now(),
+  });
+  try { localStorage.setItem(RANK_KEY, JSON.stringify(rows.slice(-200))); } catch (e) { }
+}
+function localRows() {
+  const rows = getRank();
+  const best = new Map();
+  for (const r of rows) {
+    const cur = best.get(r.name);
+    if (!cur || r.ms < cur.ms) best.set(r.name, r);
+  }
+  return [...best.values()].sort((a, b) => a.ms - b.ms).map(r => ({
+    name: r.name, cls: CLASS_CODE || '本机', rounds: ROUNDS.length, ms: r.ms, at: new Date(r.at),
+  }));
+}
+
+// 云端读榜：只取 shandian、只取 3 关这一版
+async function fetchCloudRank(cls) {
+  let url = SB_URL + '/leaderboard?select=game,class_code,player_name,rounds_total,total_ms,created_at'
+    + '&game=eq.' + GAME
+    + '&rounds_total=eq.' + ROUNDS.length
+    + '&order=total_ms.asc&limit=60';
+  if (cls) url += '&class_code=eq.' + encodeURIComponent(cls);
+  const r = await fetch(url, { headers: { apikey: SB_KEY } });
+  if (!r.ok) {
+    const body = await r.text().catch(() => '');
+    // 缺列有两种写法：Postgres 的 42703，PostgREST 的 PGRST204
+    if (/42703|PGRST204|does not exist|Could not find/.test(body)) throw new Error('数据库未升级');
+    throw new Error('HTTP ' + r.status);
+  }
+  return r.json();
+}
+
+function renderRows(el, rows, mask) {
+  const top = rows.slice(0, 10);
+  if (!top.length) { el.innerHTML = '<div class="rank-empty">还没有成绩，完成一局就上榜</div>'; return; }
+  el.innerHTML = top.map((r, i) => `
+    <div class="rank-row">
+      <div class="rank-no top${i}">${i + 1}</div>
+      <div class="rank-name">${esc(mask ? maskName(r.name) : r.name)}</div>
+      <div class="rank-class">${esc(r.cls)}</div>
+      <div class="rank-clear">${r.rounds} 关</div>
+      <div class="rank-time">${fmt(r.ms)}</div>
+      <div class="rank-date">${dateFull(r.at)}</div>
+    </div>`).join('');
+}
+
+const boardLayer = document.getElementById('boardLayer');
+const rankListEl = document.getElementById('rankList');
+const rankNoteEl = document.getElementById('rankNote');
+const rankTabsEl = document.getElementById('rankTabs');
+const btnRank = document.getElementById('btnRank');
+let rankTab = 'all';
+
+async function refreshRank() {
+  rankNoteEl.textContent = '读取中…';
+  try {
+    const cls = rankTab === 'cls' && CLASS_CODE ? CLASS_CODE : '';
+    const data = await fetchCloudRank(cls);
+    const rows = data.map(r => ({
+      name: r.player_name,
+      cls: r.class_code + ' 班',
+      rounds: r.rounds_total || ROUNDS.length,
+      ms: r.total_ms,
+      at: new Date(r.created_at),
+    }));
+    renderRows(rankListEl, rows, !CLASS_CODE);
+    rankNoteEl.textContent = '云端成绩 · 共 ' + rows.length + ' 条 · 每人只取最快一次';
+  } catch (e) {
+    // 数据库还没迁移（缺 game 等列）或网络不通：先显示本机成绩，别白屏
+    renderRows(rankListEl, localRows(), false);
+    rankNoteEl.textContent = '云端榜暂不可用（' + (e.message || '') + '），先显示本机成绩';
+  }
+}
+
+btnRank.onclick = () => { boardLayer.classList.add('show'); refreshRank(); };
+document.getElementById('rankClose').onclick = () => boardLayer.classList.remove('show');
+document.getElementById('rankRefresh').onclick = refreshRank;
+rankTabsEl.querySelectorAll('button').forEach(b => {
+  if (b.dataset.tab === 'cls' && !CLASS_CODE) b.disabled = true;
+  b.onclick = () => {
+    if (b.disabled) return;
+    rankTab = b.dataset.tab;
+    rankTabsEl.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
+    refreshRank();
+  };
+});
+
+// ---------- 成绩上传（云端） ----------
+async function uploadScore(p) {
+  const b3 = p.badge.querySelector('.b3');
+  if (!CLASS_CODE) return;
+  const payload = {
+    session_id: app.sessionId,
+    class_code: CLASS_CODE,
+    player_name: p.playerName || '匿名',
+    total_ms: Math.round(p.finishTime),
+    rounds: p.laps,
+    rounds_total: ROUNDS.length,
+    game: GAME,
+    detail: { laps: p.laps, miss: p.miss },
+  };
+  try {
+    const r = await fetch(SB_URL + '/scores', {
+      method: 'POST',
+      headers: {
+        apikey: SB_KEY,
+        Authorization: 'Bearer ' + SB_KEY,
+        'Content-Type': 'application/json',
+        Prefer: 'return=minimal',
+      },
+      body: JSON.stringify(payload),
+    });
+    if (!r.ok) {
+      const t = await r.text();
+      throw new Error('HTTP ' + r.status + ' ' + t.slice(0, 100));
+    }
+    if (b3) b3.textContent += ' · 已上榜 ✓';
+  } catch (e) {
+    if (b3) b3.textContent += ' · 仅记本机';
+    console.warn('[score] 上传失败:', e.message);
+  }
+}
+
+// ---------- 姓名 / 名单（与《四人解阵》共用） ----------
+const btnNames = document.getElementById('btnNames');
+const nameLayer = document.getElementById('nameLayer');
+const nameInput = document.getElementById('nameInput');
+const nameCountEl = document.getElementById('nameCount');
+const NAMES_KEY = 'jz_names_' + (CLASS_CODE || 'home');
+function getNames() {
+  try { const a = JSON.parse(localStorage.getItem(NAMES_KEY) || '[]'); return Array.isArray(a) ? a : []; }
+  catch (e) { return []; }
+}
+function setNames(a) { try { localStorage.setItem(NAMES_KEY, JSON.stringify(a)); } catch (e) { } }
+
+function openNamePop(p) {
+  if (app.phase !== 'ready') return;
+  renderNamePop(p);
+  p.namePop.classList.add('show');
+}
+function closeNamePop(p) { p.namePop.classList.remove('show'); }
+
+function renderNamePop(p) {
+  const list = p.namePop.querySelector('.namepop-list');
+  const names = getNames();
+  const taken = new Set(app.players.filter(q => q !== p && q.playerName).map(q => q.playerName));
+  let html = '';
+  if (!names.length) {
+    html += `<div class="namepop-empty">还没有名单。<br>请老师点左上角「名单」导入全班名字，或直接在下面输入。</div>`;
+  } else {
+    html += names.map(nm => {
+      const busy = taken.has(nm) && nm !== p.playerName;
+      return `<button data-nm="${esc(nm)}" class="${busy ? 'taken' : ''}">${esc(nm)}</button>`;
+    }).join('');
+  }
+  html += `<div class="namepop-own"><input placeholder="没有我的名字？在这里打" maxlength="12"><button>确定</button></div>`;
+  list.innerHTML = html;
+
+  list.querySelectorAll('button[data-nm]').forEach(b => {
+    if (b.classList.contains('taken')) return;
+    b.onclick = () => setPlayerName(p, b.dataset.nm);
+  });
+  const inp = list.querySelector('input');
+  const ok = list.querySelector('.namepop-own button');
+  const commit = () => { const v = inp.value.trim(); if (v) setPlayerName(p, v); };
+  ok.onclick = commit;
+  inp.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); commit(); } };
+}
+
+function setPlayerName(p, name) {
+  p.playerName = name;
+  p.nameSlot.textContent = name;
+  p.nameSlot.classList.add('sel');
+  closeNamePop(p);
+  const n = app.players.filter(q => q.playerName).length;
+  statusEl.textContent = `已选姓名 ${n}/${app.players.length}`;
+}
+
+function clearNames() {
+  app.players.forEach(p => {
+    p.playerName = '';
+    p.nameSlot.textContent = '＋ 选姓名';
+    p.nameSlot.classList.remove('sel');
+    closeNamePop(p);
+  });
+}
+
+btnNames.onclick = () => {
+  nameInput.value = getNames().join('\n');
+  nameCountEl.textContent = '当前 ' + getNames().length + ' 人';
+  nameLayer.classList.add('show');
+};
+document.getElementById('nameClose').onclick = () => nameLayer.classList.remove('show');
+document.getElementById('nameSave').onclick = () => {
+  const arr = nameInput.value.split(/[\n,，、;；\s]+/).map(s => s.trim()).filter(Boolean).slice(0, 80);
+  setNames(arr);
+  nameCountEl.textContent = '已保存 ' + arr.length + ' 人';
+  statusEl.textContent = '名单已保存，学生点姓名即可';
+};
+
+// ---------- 演示动画（手动触发，不自动播放） ----------
+const DEMO_NUMS = [7, 12, 3, 15, 9, 1, 14, 6, 11, 4, 16, 8, 2, 13, 10, 5];
+const demoLayer = document.getElementById('demo');
+const demoGrid = document.getElementById('demoGrid');
+const demoTipEl = document.getElementById('demoTip');
+const demoState = { on: false, timer: 0, step: 0 };
+
+function demoBuild() {
+  demoGrid.innerHTML = DEMO_NUMS.map(n => `<div data-n="${n}">${n}</div>`).join('');
+}
+demoBuild();
+
+function demoPaint(step) {
+  const all = [...demoGrid.children];
+  all.forEach(d => d.classList.remove('on'));
+  if (step <= 0) { demoTipEl.textContent = '按 1、2、3…… 的顺序点格子'; return; }
+  const target = all.find(d => Number(d.dataset.n) === step);
+  if (target) target.classList.add('on');
+  demoTipEl.textContent = `找到 ${step} → 点它`;
+}
+
+function demoOpen() {
+  demoLayer.classList.add('show');
+  demoState.on = true;
+  demoState.step = 0;
+  demoPaint(0);
+  clearInterval(demoState.timer);
+  demoState.timer = setInterval(() => {
+    demoState.step++;
+    if (demoState.step > DEMO_NUMS.length) demoState.step = 1;
+    demoPaint(demoState.step);
+  }, 480);
+}
+
+function demoClose() {
+  demoState.on = false;
+  demoLayer.classList.remove('show');
+  clearInterval(demoState.timer);
+  demoState.timer = 0;
+}
+
+btnDemo.onclick = demoOpen;
+document.getElementById('demoReplay').onclick = () => {
+  demoState.step = 0;
+  demoPaint(0);
+};
+document.getElementById('demoClose').onclick = demoClose;
+
+// ---------- 重新开始 / 换一组 ----------
+let restartAt = 0, restartTimer = 0;
+btnRestart.onclick = () => {
+  const running = app.phase === 'play' || app.phase === 'countdown';
+  if (running && performance.now() - restartAt > 2600) {
+    restartAt = performance.now();
+    btnRestart.textContent = '再点一次确认';
+    btnRestart.classList.add('warn');
+    clearTimeout(restartTimer);
+    restartTimer = setTimeout(() => {
+      restartAt = 0;
+      btnRestart.textContent = '重新开始';
+      btnRestart.classList.remove('warn');
+    }, 2600);
+    return;
+  }
+  clearTimeout(restartTimer);
+  restartAt = 0;
+  btnRestart.classList.remove('warn');
+  armGame();
+  statusEl.textContent = '重新开始：四人重新选姓名';
+};
+
+let nextAt = 0, nextTimer = 0;
+btnNext.onclick = () => {
+  const running = app.phase === 'play' || app.phase === 'countdown';
+  if (running && performance.now() - nextAt > 2600) {
+    nextAt = performance.now();
+    btnNext.textContent = '再点一次确认';
+    btnNext.classList.add('warn');
+    clearTimeout(nextTimer);
+    nextTimer = setTimeout(() => {
+      nextAt = 0;
+      btnNext.textContent = '换一组';
+      btnNext.classList.remove('warn');
+    }, 2600);
+    return;
+  }
+  clearTimeout(nextTimer);
+  nextAt = 0;
+  btnNext.classList.remove('warn');
+  clearNames();
+  armGame();
+  statusEl.textContent = '新一组：四人重新选姓名';
+};
+
+// ---------- 初始化 ----------
+for (let i = 0; i < 4; i++) makePlayer(i);
+const classTag = document.getElementById('classTag');
+classTag.textContent = CLASS_CODE ? ' · ' + CLASS_CODE + ' 班' : '';
+document.title = '数字闪电 · ' + (CLASS_CODE ? CLASS_CODE + ' 班' : '四人同屏');
+app.sessionId = uuid();
+armGame();
+app.players.forEach(p => setTimeout(() => fitGrid(p), 0));
+
+btnFull.onclick = () => {
+  if (!document.fullscreenElement) document.documentElement.requestFullscreen?.();
+  else document.exitFullscreen?.();
+};
+window.addEventListener('keydown', e => {
+  if (demoState.on) {
+    if (e.code === 'Space' || e.code === 'Escape' || e.code === 'Enter') {
+      e.preventDefault();
+      demoClose();
+    }
+    return;
+  }
+  if (e.code === 'Space') {
+    e.preventDefault();
+    if (app.phase === 'ready') {
+      if (app.players.some(p => !p.playerName)) { statusEl.textContent = '还有同学没选姓名'; return; }
+      app.players.forEach(p => setReady(p));
+    }
+  }
+});
+window.addEventListener('resize', () => app.players.forEach(fitGrid));
+document.addEventListener('contextmenu', e => e.preventDefault());
+document.addEventListener('gesturestart', e => e.preventDefault());
+document.addEventListener('dblclick', e => e.preventDefault());
+</script>
+</body>
+</html>
