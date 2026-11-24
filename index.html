@@ -1404,26 +1404,36 @@ function clearNames() {
 async function uploadScore(p) {
   const el = p.badge.querySelector('.b3');
   if (!CLASS_CODE) { if (el) el.textContent = '练习模式，不上传'; return; }
+  const payload = {
+    session_id: app.sessionId,
+    class_code: CLASS_CODE,
+    player_name: p.playerName || '匿名',
+    total_ms: Math.round(p.finishTime),
+    rounds: p.laps,
+    rounds_total: ROUNDS.length,   // 记录当时的关数，以后加关卡不影响旧成绩
+  };
+  const post = body => fetch(SB_URL + '/scores', {
+    method: 'POST',
+    headers: {
+      apikey: SB_KEY,
+      Authorization: 'Bearer ' + SB_KEY,
+      'Content-Type': 'application/json',
+      Prefer: 'return=minimal',
+    },
+    body: JSON.stringify(body),
+  });
   try {
-    const r = await fetch(SB_URL + '/scores', {
-      method: 'POST',
-      headers: {
-        apikey: SB_KEY,
-        Authorization: 'Bearer ' + SB_KEY,
-        'Content-Type': 'application/json',
-        Prefer: 'return=minimal',
-      },
-      body: JSON.stringify({
-        session_id: app.sessionId,
-        class_code: CLASS_CODE,
-        player_name: p.playerName || '匿名',
-        total_ms: Math.round(p.finishTime),
-        rounds: p.laps,
-        rounds_total: ROUNDS.length,   // 记录当时的关数，以后加关卡不影响旧成绩
-      }),
-    });
+    let r = await post(payload);
     if (!r.ok) {
       const t = await r.text();
+      // 数据库还没加 rounds_total 字段（错误码 42703）：去掉它再投一次，成绩不会丢
+      if (/42703|does not exist/.test(t)) {
+        const { rounds_total, ...legacy } = payload;
+        r = await post(legacy);
+        if (!r.ok) throw new Error('HTTP ' + r.status + ' ' + (await r.text()).slice(0, 120));
+        if (el) { el.textContent = '成绩已上榜 ✓'; el.style.color = '#7be495'; }
+        return;
+      }
       throw new Error('HTTP ' + r.status + ' ' + t.slice(0, 120));
     }
     if (el) { el.textContent = '成绩已上榜 ✓'; el.style.color = '#7be495'; }
@@ -1440,11 +1450,18 @@ async function uploadScore(p) {
 // ---------- 榜单 ----------
 // 只统计“当前关数”这一版的成绩：以后加关卡，旧成绩不会和新成绩混排
 async function fetchRank(cls) {
-  let url = SB_URL + '/leaderboard?select=class_code,player_name,total_ms,created_at,rounds_total'
-    + '&rounds_total=eq.' + ROUNDS.length
-    + '&order=total_ms.asc&limit=60';
-  if (cls) url += '&class_code=eq.' + encodeURIComponent(cls);
-  const r = await fetch(url, { headers: { apikey: SB_KEY } });
+  const base = SB_URL + '/leaderboard?select=class_code,player_name,total_ms,created_at';
+  const clsPart = cls ? '&class_code=eq.' + encodeURIComponent(cls) : '';
+  // 先按“当前关数”取（需要库里已有 rounds_total 字段）
+  let url = base + ',rounds_total&rounds_total=eq.' + ROUNDS.length + '&order=total_ms.asc&limit=60' + clsPart;
+  let r = await fetch(url, { headers: { apikey: SB_KEY } });
+  if (r.ok) return r.json();
+  const body = await r.text().catch(() => '');
+  // 库还是旧结构（列不存在）：退回旧查询，榜单照常显示，别让页面白屏
+  if (!/42703|does not exist/.test(body)) throw new Error('HTTP ' + r.status);
+  console.warn('[rank] 数据库缺 rounds_total 列，已用旧结构读取');
+  url = base + '&order=total_ms.asc&limit=60' + clsPart;
+  r = await fetch(url, { headers: { apikey: SB_KEY } });
   if (!r.ok) throw new Error('HTTP ' + r.status);
   return r.json();
 }
