@@ -1,0 +1,1485 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="robots" content="noindex,nofollow">
+<title>四人解阵 · 5×5 / 6×6 / 7×7</title>
+<style>
+  :root{
+    --bg:#0d1020; --panel:#171c33; --panel2:#1e2440; --line:#2b3358;
+    --txt:#e8ecff; --dim:#8b93b8; --accent:#6ea8ff;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;}
+  body{
+    margin:0; background:radial-gradient(1200px 700px at 50% -10%, #1b2450, #0d1020 60%);
+    color:var(--txt); font-family:"PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    overflow:hidden; user-select:none; -webkit-user-select:none; -webkit-touch-callout:none;
+    touch-action:manipulation; overscroll-behavior:none;
+  }
+  #app{height:100%; display:flex; flex-direction:column; padding:4px 12px 1px;}
+  header{flex:0 0 auto; display:flex; align-items:center; gap:14px; padding:0 4px 4px;}
+  .title{display:flex; align-items:baseline; gap:12px;}
+  .title h1{margin:0; font-size:26px; letter-spacing:2px; font-weight:800;}
+  .title h1 small{font-size:14px; font-weight:600; color:var(--dim); letter-spacing:1px;}
+  .ctrl{display:flex; align-items:center; gap:10px; margin-left:auto;}
+  #status{font-size:15px; color:var(--dim); min-width:160px; text-align:right;}
+  button{
+    font-family:inherit; font-size:16px; font-weight:700; color:#fff; cursor:pointer;
+    background:linear-gradient(180deg,#3b4e80,#2a3760); border:1px solid #4b5f96;
+    padding:9px 18px; border-radius:12px; touch-action:none;
+  }
+  button:disabled{opacity:.45; cursor:default;}
+  button.primary{background:linear-gradient(180deg,#3f7fe0,#2a5cb8); border-color:#6ea8ff;}
+  button.ghost{padding:7px 13px; font-size:14px; background:linear-gradient(180deg,#2b3358,#1d2340); border-color:#3f4a78;}
+  button.warn{background:linear-gradient(180deg,#a33f3f,#7c2a2a); border-color:#e07474;}
+  #boards{flex:1; display:grid; grid-template-columns:repeat(4,1fr); gap:12px; min-height:0;}
+  .panel{
+    background:linear-gradient(180deg,var(--panel2),var(--panel)); border:1px solid var(--line);
+    border-radius:18px; padding:7px 10px 3px; display:flex; flex-direction:column; min-height:0; min-width:0;
+    position:relative; overflow:hidden;
+  }
+  .phead{flex:0 0 auto; display:flex; align-items:center; justify-content:space-between; gap:8px; padding:0 4px 2px;}
+  .pname{font-size:20px; font-weight:800; letter-spacing:1px;}
+  .pmeta{display:flex; align-items:center; gap:10px;}
+  .round-dots{display:flex; gap:5px;}
+  .dot{width:11px; height:11px; border-radius:50%; background:#39406a; border:1px solid #4a5488;}
+  .dot.done{background:#5ce08a; border-color:#5ce08a;}
+  .dot.now{background:#ffd166; border-color:#ffd166; box-shadow:0 0 10px #ffd16688;}
+  .pfoot{flex:0 0 auto; display:flex; align-items:flex-end; justify-content:space-between; gap:8px; padding:6px 4px 2px;}
+  .round-label{font-size:16px; font-weight:700; color:#9fb4ff;}
+  .round-label small{display:block; font-size:12px; font-weight:500; color:#6f78a0; margin-top:1px;}
+  /* 关卡标签 + 计时挪到棋盘上方，给棋盘腾出屏幕底部的空间 */
+  .stage-info{display:flex; align-items:center; justify-content:center; gap:22px; padding:0 4px;}
+  .time{font-variant-numeric:tabular-nums; font-size:34px; font-weight:800; color:#cfe0ff; letter-spacing:1px; line-height:1.1;}
+  .time.small{font-size:20px; color:#ffd166;}
+  .boardwrap{flex:1; display:flex; align-items:flex-end; justify-content:center; min-height:0; padding-bottom:0; position:relative;}
+  canvas{display:block; border-radius:14px; background:#0f1428; touch-action:none; cursor:crosshair; position:relative; z-index:2;}
+  .badge{
+    position:absolute; left:50%; bottom:10px; transform:translateX(-50%) scale(.92);
+    display:flex; flex-direction:column; align-items:center; gap:6px; padding:16px 30px; border-radius:16px;
+    background:linear-gradient(180deg,#2f3d6e,#222c52); color:#eaf1ff; border:1px solid #5f72ad;
+    box-shadow:0 10px 30px #0007; opacity:0; transition:opacity .25s, transform .25s;
+    white-space:nowrap;
+  }
+  .badge.show{opacity:1; transform:translateX(-50%) scale(1);}
+  .badge .b1{font-size:48px; font-weight:800; letter-spacing:2px; line-height:1.05; color:#ffe7a3;}
+  .badge .b2{font-size:28px; font-weight:700; color:#cfe0ff; font-variant-numeric:tabular-nums;}
+  .stage{
+    position:absolute; left:0; right:0; top:0; display:flex; flex-direction:column;
+    align-items:center; justify-content:flex-end; gap:12px; pointer-events:none; z-index:0;
+    padding-bottom:10px; overflow:hidden;
+  }
+  .stage-colors{display:flex; align-items:center; justify-content:center; gap:16px;}
+  .chip{width:54px; height:54px; border-radius:50%; border:3px solid rgba(255,255,255,.35); box-shadow:0 6px 18px #0006;}
+  .stage-tip{font-size:15px; color:#7d86ac; letter-spacing:1px;}
+  .stage.done .stage-colors, .stage.done .stage-tip, .stage.done .stage-info{display:none;}
+  .stage.done{justify-content:flex-end; padding-bottom:12px;}
+  .ready-btn{
+    pointer-events:auto; font-size:32px; font-weight:800; letter-spacing:3px;
+    padding:18px 52px; border-radius:18px;
+    background:linear-gradient(180deg,#3f7fe0,#2a5cb8); border:1px solid #6ea8ff;
+    box-shadow:0 10px 28px #000a;
+  }
+  .ready-btn.on{
+    background:linear-gradient(180deg,#2f9c64,#1e6f47); border-color:#5ce08a; color:#dcffe9;
+    box-shadow:0 0 18px #5ce08a55;
+  }
+  .cover{
+    position:absolute; left:50%; transform:translateX(-50%); bottom:0;
+    display:flex; align-items:center; justify-content:center; pointer-events:none; z-index:4;
+  }
+  canvas.hide-layout{filter:blur(12px) saturate(.55) brightness(.5);}
+  .count{
+    display:none; font-size:132px; font-weight:800; line-height:1; color:#ffd166;
+    text-shadow:0 6px 26px #0009;
+  }
+  .count.show{display:block;}
+  .stage.cd .stage-colors, .stage.cd .stage-tip, .stage.cd .stage-info, .stage.cd .ready-btn{display:none;}
+  footer{flex:0 0 auto; display:flex; align-items:center; justify-content:space-between; gap:18px; padding:1px 4px 0; color:var(--dim); font-size:13px; line-height:1.35;}
+  #board-list{flex:1; text-align:center; font-size:16px; color:#cfe0ff;}
+  .hint{font-size:13px; color:#6f78a0;}
+  .flash{animation:flash .5s ease;}
+  @keyframes flash{0%{box-shadow:0 0 0 0 #5ce08a00;} 30%{box-shadow:0 0 0 4px #5ce08a55;} 100%{box-shadow:0 0 0 0 #5ce08a00;}}
+
+  /* ---------- 玩法演示 ---------- */
+  #demo{
+    position:fixed; inset:0; z-index:50; display:none; align-items:center; justify-content:center;
+    background:rgba(6,8,18,.94);
+  }
+  #demo.show{display:flex;}
+  .demo-box{
+    display:flex; flex-direction:column; align-items:center; gap:14px;
+    padding:16px 28px 18px; border-radius:24px;
+    background:linear-gradient(180deg,#1c2549,#141a30); border:1px solid #3f4d80;
+    box-shadow:0 26px 70px #000c;
+  }
+  .demo-title{font-size:25px; font-weight:800; letter-spacing:4px; color:#dfe8ff;}
+  #demoCanvas{
+    width:min(52vh,520px); height:min(52vh,520px);
+    border-radius:16px; background:#0f1428; display:block;
+    box-shadow:0 10px 34px #0008, inset 0 0 0 1px #2a3358;
+  }
+  .demo-tip{
+    font-size:23px; font-weight:700; color:#ffd166; letter-spacing:1px;
+    height:32px; line-height:32px; white-space:nowrap;
+  }
+  .demo-foot{display:flex; align-items:center; gap:14px;}
+  .demo-foot button{font-size:19px; padding:12px 24px;}
+  #demoReplay{padding:12px 22px;}
+
+  /* ================= 姓名 / 榜单 / 首页 ================= */
+  .name-slot{
+    font-family:inherit; background:transparent; border:1px dashed #4d5b8f; color:#9fb4ff;
+    font-size:17px; font-weight:800; letter-spacing:1px; padding:3px 12px; border-radius:10px;
+    max-width:60%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .name-slot.sel{ border:1px solid #5ce08a; background:#173627; color:#dcffe9; }
+  .namepop{
+    position:absolute; left:6px; right:6px; top:2px; bottom:2px; z-index:7; display:none;
+    flex-direction:column; padding:8px 8px 6px; border-radius:14px;
+    background:linear-gradient(180deg,#1f2747,#161b2f); border:1px solid #3f4d80;
+    box-shadow:0 14px 40px #000b;
+  }
+  .namepop.show{ display:flex; }
+  .namepop-head{ display:flex; align-items:center; justify-content:space-between; padding:0 2px 6px; }
+  .namepop-head span{ font-size:14px; color:#9fb4ff; font-weight:700; }
+  .namepop-head button{ font-size:13px; padding:3px 10px; border-radius:8px; }
+  .namepop-list{
+    flex:1; min-height:0; overflow-y:auto; display:grid; gap:6px; align-content:start;
+    grid-template-columns:repeat(3,1fr); touch-action:pan-y;
+  }
+  .namepop-list button{ font-size:15px; padding:8px 2px; border-radius:9px; background:#242d4f; border:1px solid #38426e; }
+  .namepop-list button.taken{ opacity:.3; }
+  .namepop-empty{ font-size:14px; color:#7d86ac; padding:10px 4px; line-height:1.7; grid-column:1/-1; }
+  .namepop-own{ grid-column:1/-1; display:flex; gap:6px; margin-top:4px; }
+  .namepop-own input{
+    flex:1; min-width:0; font-family:inherit; font-size:15px; padding:7px 10px; border-radius:9px;
+    background:#10152a; border:1px solid #3f4d80; color:#e8ecff;
+  }
+  .namepop-own button{ font-size:15px; padding:7px 12px; border-radius:9px; }
+  .badge .b3{ font-size:15px; font-weight:600; color:#9fb4ff; }
+
+  .rank-list{ display:flex; flex-direction:column; gap:6px; overflow-y:auto; min-height:0; touch-action:pan-y; }
+  .rank-row{
+    display:grid; grid-template-columns:44px 1fr 92px 112px 62px; align-items:center; gap:8px;
+    padding:9px 12px; border-radius:12px; background:#1a2140; border:1px solid #2a3358; font-size:18px;
+  }
+  .rank-no{ font-size:19px; font-weight:800; color:#8b93b8; text-align:center; }
+  .rank-no.top0{ color:#ffd166; } .rank-no.top1{ color:#d8e2ff; } .rank-no.top2{ color:#ffb26b; }
+  .rank-name{ font-weight:800; color:#eaf1ff; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .rank-class{ font-size:15px; color:#8b93b8; }
+  .rank-time{ font-variant-numeric:tabular-nums; font-weight:800; color:#9fd8ff; text-align:right; }
+  .rank-date{ font-size:13px; color:#6f78a0; text-align:right; }
+  .rank-empty{ padding:40px 10px; text-align:center; font-size:17px; color:#6f78a0; }
+
+  #boardLayer, #nameLayer, #home{
+    position:fixed; inset:0; z-index:60; display:none; align-items:center; justify-content:center;
+    background:rgba(6,8,18,.95);
+  }
+  #boardLayer.show, #nameLayer.show{ display:flex; }
+  .board-box, .name-box{
+    display:flex; flex-direction:column; gap:12px; width:min(920px,92vw); max-height:88vh;
+    padding:18px 22px 16px; border-radius:22px; background:linear-gradient(180deg,#1c2549,#141a30);
+    border:1px solid #3f4d80; box-shadow:0 26px 70px #000c;
+  }
+  .board-box h3, .name-box h3{ margin:0; font-size:24px; letter-spacing:3px; color:#dfe8ff; }
+  .rank-tabs{ display:flex; gap:10px; }
+  .rank-tabs button{ font-size:15px; padding:7px 16px; border-radius:10px; }
+  .rank-tabs button.on{ background:linear-gradient(180deg,#3f7fe0,#2a5cb8); border-color:#6ea8ff; }
+  .board-foot{ display:flex; align-items:center; gap:10px; }
+  .board-foot span{ flex:1; font-size:13px; color:#6f78a0; }
+  .name-box textarea{
+    width:100%; height:38vh; resize:none; font-family:inherit; font-size:16px; line-height:1.8;
+    padding:12px 14px; border-radius:14px; background:#10152a; border:1px solid #3f4d80; color:#e8ecff;
+  }
+  .name-box p{ margin:0; font-size:14px; color:#8b93b8; line-height:1.6; }
+  .name-foot{ display:flex; align-items:center; gap:10px; }
+  .name-foot span{ flex:1; font-size:14px; color:#9fb4ff; }
+
+  body.home-mode #boards, body.home-mode .game-only{ display:none; }
+  body.home-mode #home{ display:flex; background:#0d1020; }
+  .home-box{
+    display:flex; flex-direction:column; gap:14px; width:min(900px,92vw); max-height:88vh;
+    padding:24px 28px 22px; border-radius:24px; background:linear-gradient(180deg,#1c2549,#141a30);
+    border:1px solid #3f4d80; box-shadow:0 26px 70px #000c;
+  }
+  .home-box h2{ margin:0; font-size:29px; letter-spacing:3px; color:#eaf1ff; }
+  .home-sub{ margin:0; font-size:14px; color:#8b93b8; line-height:1.65; }
+  .home-enter{ display:flex; gap:10px; }
+  .home-enter input{
+    flex:1; min-width:0; font-family:inherit; font-size:18px; padding:11px 16px; border-radius:12px;
+    background:#10152a; border:1px solid #3f4d80; color:#e8ecff;
+  }
+  .home-enter button{ font-size:18px; padding:11px 24px; }
+  .home-box .rank-list{ max-height:46vh; }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <button id="btnFull" class="ghost">全屏</button>
+    <button id="btnDemo" class="ghost">演示</button>
+    <button id="btnRestart" class="ghost game-only">重新开始</button>
+    <button id="btnNames" class="ghost game-only">名单</button>
+    <button id="btnRank" class="ghost">排行榜</button>
+    <div class="title"><h1>四人解阵 <small>6 关 · 5×5 → 6×6 → 7×7<span id="classTag"></span></small></h1></div>
+    <div class="ctrl">
+      <span id="status">四人各按自己棋盘上的「开始」</span>
+    </div>
+  </header>
+  <main id="boards"></main>
+  <footer>
+    <span class="hint">四人布局不同、难度一致 · 每关把整块棋盘走满即过关</span>
+    <div id="board-list">排行榜将在完成后显示</div>
+    <span class="hint" id="tip">先选姓名，四人就位后倒计时 3 秒 · 空格=全员就位 · 刷新页面=换新题</span>
+  </footer>
+</div>
+
+<div id="demo">
+  <div class="demo-box">
+    <div class="demo-title">玩法演示</div>
+    <canvas id="demoCanvas"></canvas>
+    <div class="demo-tip" id="demoTip">同色的两个圆点，用一条线连起来</div>
+    <div class="demo-foot">
+      <button id="demoReplay" class="ghost">重播</button>
+      <button id="demoClose" class="primary">知道了，开始玩</button>
+    </div>
+  </div>
+</div>
+
+<div id="boardLayer">
+  <div class="board-box">
+    <h3>排行榜 · 前 10 名</h3>
+    <div class="rank-tabs" id="rankTabs">
+      <button data-tab="all" class="on">全部班级</button>
+      <button data-tab="cls" class="game-only">本班</button>
+    </div>
+    <div class="rank-list" id="rankList"></div>
+    <div class="board-foot">
+      <span id="rankNote"></span>
+      <button id="rankRefresh" class="ghost">刷新</button>
+      <button id="rankClose" class="primary">关闭</button>
+    </div>
+  </div>
+</div>
+
+<div id="nameLayer">
+  <div class="name-box">
+    <h3>班级名单</h3>
+    <p>每行一个名字，或用逗号分隔。名单只保存在这台电脑上，不会上传。</p>
+    <textarea id="nameInput" placeholder="张三&#10;李四&#10;王五"></textarea>
+    <div class="name-foot">
+      <span id="nameCount"></span>
+      <button id="nameClose" class="ghost">关闭</button>
+      <button id="nameSave" class="primary">保存名单</button>
+    </div>
+  </div>
+</div>
+
+<div id="home">
+  <div class="home-box">
+    <h2>四人解阵 · 班级排行榜</h2>
+    <p class="home-sub">输入班级号进入本班游戏页。每人只保留自己的最快一次成绩，前 10 名实时更新。</p>
+    <div class="home-enter">
+      <input id="classInput" placeholder="输入班级号，例如 701" maxlength="12">
+      <button id="btnEnter" class="primary">进入本班</button>
+    </div>
+    <div class="rank-list" id="homeRank"></div>
+  </div>
+</div>
+
+<script>
+// ======================= CORE START =======================
+// 棋盘尺寸按关卡变化：5×5 / 6×6 / 7×7
+const NB_CACHE = {};
+function neighbors(n) {
+  if (NB_CACHE[n]) return NB_CACHE[n];
+  const a = [];
+  for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) {
+    const l = [];
+    if (r > 0) l.push((r - 1) * n + c);
+    if (r < n - 1) l.push((r + 1) * n + c);
+    if (c > 0) l.push(r * n + c - 1);
+    if (c < n - 1) l.push(r * n + c + 1);
+    a.push(l);
+  }
+  return (NB_CACHE[n] = a);
+}
+const rowOf = (n, i) => Math.floor(i / n);
+const colOf = (n, i) => i % n;
+const dist = (n, p) => Math.abs(rowOf(n, p[0]) - rowOf(n, p[1])) + Math.abs(colOf(n, p[0]) - colOf(n, p[1]));
+
+function randomHamiltonian(n, rand) {
+  const cells = n * n, nb = neighbors(n);
+  const vis = new Uint8Array(cells), path = [];
+  const limit = cells <= 25 ? 60000 : 200000;
+  let steps = 0;
+  const onward = (i) => { let c = 0; for (const x of nb[i]) if (!vis[x]) c++; return c; };
+  function dfs(i) {
+    if (++steps > limit) return false;
+    vis[i] = 1; path.push(i);
+    if (path.length === cells) return true;
+    const cand = nb[i].filter(x => !vis[x]);
+    cand.sort((x, y) => (onward(x) - onward(y)) + (rand() - 0.5) * 1.2);
+    for (const x of cand) if (dfs(x)) return true;
+    path.pop(); vis[i] = 0; return false;
+  }
+  return dfs(Math.floor(rand() * cells)) ? path.slice() : null;
+}
+
+function cutPath(path, k, rand) {
+  // 尽量均分：每段长度在平均值上下浮动，避免出现一条超长、其余全是两格的怪题
+  const total = path.length;
+  const lens = new Array(k).fill(2);
+  let rem = total - 2 * k;
+  const order = [...Array(k).keys()];
+  while (rem > 0) {
+    for (let i = k - 1; i > 0; i--) {
+      const j = Math.floor(rand() * (i + 1));
+      [order[i], order[j]] = [order[j], order[i]];
+    }
+    for (const i of order) {
+      if (rem === 0) break;
+      lens[i]++; rem--;
+    }
+  }
+  const segs = []; let pos = 0;
+  for (const L of lens) { segs.push(path.slice(pos, pos + L)); pos += L; }
+  return segs;
+}
+
+// 数解（最多数 limit 个）
+function solveCount(pairs, n, limit) {
+  const k = pairs.length, cells = n * n, nb = neighbors(n);
+  const endOwner = new Int8Array(cells).fill(-1);
+  pairs.forEach(([a, b], i) => { endOwner[a] = i; endOwner[b] = i; });
+  const occ = new Int8Array(cells).fill(-1);
+  pairs.forEach(([a, b], i) => { occ[a] = i; occ[b] = i; });
+  let count = 0;
+  const stamp = new Int32Array(cells); let cur = 0;
+
+  function reachable(from, to) {
+    cur++; const q = [from]; stamp[from] = cur; let h = 0;
+    while (h < q.length) {
+      const x = q[h++];
+      if (x === to) return true;
+      for (const y of nb[x]) {
+        if (stamp[y] === cur) continue;
+        if (y === to || occ[y] === -1) { stamp[y] = cur; q.push(y); }
+      }
+    }
+    return false;
+  }
+
+  const order = pairs.map((p, i) => i).sort((i, j) => dist(n, pairs[i]) - dist(n, pairs[j]));
+
+  function go(o) {
+    if (count >= limit) return;
+    if (o === k) {
+      for (let i = 0; i < cells; i++) if (occ[i] === -1) return;
+      count++; return;
+    }
+    const ci = order[o], [s, t] = pairs[ci];
+    function ext(cell) {
+      if (count >= limit) return;
+      if (cell === t) { go(o + 1); return; }
+      if (!reachable(cell, t)) return;
+      for (const y of nb[cell]) {
+        if (y === t) ext(t);
+        else if (occ[y] === -1) { occ[y] = ci; ext(y); occ[y] = -1; }
+      }
+    }
+    ext(s);
+  }
+  go(0);
+  return count;
+}
+
+function randomPairs(k, n, rand) {
+  const cells = [], total = n * n;
+  let guard = 0;
+  while (cells.length < 2 * k && guard++ < 800) {
+    const c = Math.floor(rand() * total);
+    if (!cells.includes(c)) cells.push(c);
+  }
+  const pairs = [];
+  for (let i = 0; i < k; i++) pairs.push([cells[2 * i], cells[2 * i + 1]]);
+  return pairs;
+}
+
+// 题面不追求唯一解：只要保证有解即可，多种铺法都算过关。
+function genPuzzle(k, n, rand) {
+  // 6×6 / 7×7：切段本身就是一条合法解，且大棋盘通常有多种铺法，直接采用（省得算解拖慢出题）
+  if (n >= 6) {
+    for (let att = 0; att < 200; att++) {
+      const ham = randomHamiltonian(n, rand);
+      if (!ham) continue;
+      const segs = cutPath(ham, k, rand);
+      return { pairs: segs.map(s => [s[0], s[s.length - 1]]), segs };
+    }
+    return { pairs: randomPairs(k, n, rand), segs: null };
+  }
+  // 5×5：优先挑“至少两种走法”的题，孩子不容易卡死
+  let anySolvable = null;
+  for (let att = 0; att < 60; att++) {
+    const ham = randomHamiltonian(n, rand);
+    if (!ham) continue;
+    const segs = cutPath(ham, k, rand);
+    const cand = segs.map(s => [s[0], s[s.length - 1]]);
+    const cnt = solveCount(cand, n, 3);
+    if (cnt >= 2) return { pairs: cand, segs };
+    if (cnt >= 1 && !anySolvable) anySolvable = { pairs: cand, segs };
+  }
+  if (anySolvable) return anySolvable;
+  for (let att = 0; att < 200; att++) {
+    const cand = randomPairs(k, n, rand);
+    if (solveCount(cand, n, 2) >= 1) return { pairs: cand, segs: null };
+  }
+  return { pairs: randomPairs(k, n, rand), segs: null };
+}
+
+// 8 种对称变换（旋转 / 镜像）：只改布局，不改难度——同一条解被整体搬动
+function transformCell(n, c, t) {
+  const r = Math.floor(c / n), col = c % n;
+  switch (t) {
+    case 0: return c;
+    case 1: return col * n + (n - 1 - r);              // 顺时针 90°
+    case 2: return (n - 1 - r) * n + (n - 1 - col);    // 180°
+    case 3: return (n - 1 - col) * n + r;              // 逆时针 90°
+    case 4: return r * n + (n - 1 - col);              // 左右镜像
+    case 5: return (n - 1 - r) * n + col;              // 上下镜像
+    case 6: return col * n + r;                        // 主对角翻转
+    default: return (n - 1 - col) * n + (n - 1 - r);   // 副对角翻转
+  }
+}
+const TRANSFORM_COUNT = 8;
+function transformPuzzle(puz, t, n) {
+  return {
+    pairs: puz.pairs.map(pr => pr.map(c => transformCell(n, c, t))),
+    segs: puz.segs ? puz.segs.map(sg => sg.map(c => transformCell(n, c, t))) : null,
+  };
+}
+// 颜色顺序打散：端点位置不变，只换颜色编号，难度不变
+function permuteColors(pairs, shift) {
+  const k = pairs.length;
+  if (k < 2) return pairs;
+  const s = ((shift % k) + k) % k;
+  return pairs.slice(s).concat(pairs.slice(0, s));
+}
+const sigOf = pairs => pairs.flat().slice().sort((a, b) => a - b).join(',');
+
+// 一个关卡 = 一道基题 + 四种对称变体，四人布局不同、难度完全一致
+function buildRoundSet(k, n, rand, count) {
+  for (let attempt = 0; attempt < 10; attempt++) {
+    const base = genPuzzle(k, n, rand);
+    const picks = [], sigs = new Set();
+    for (let t = 0; t < TRANSFORM_COUNT && picks.length < count; t++) {
+      const tp = transformPuzzle(base, t, n);
+      const sig = sigOf(tp.pairs);
+      if (sigs.has(sig)) continue;
+      sigs.add(sig);
+      picks.push(permuteColors(tp.pairs, picks.length));
+    }
+    if (picks.length >= count) return picks;
+  }
+  const base = genPuzzle(k, n, rand), out = [];
+  for (let i = 0; i < count; i++) {
+    out.push(permuteColors(transformPuzzle(base, i % TRANSFORM_COUNT, n).pairs, i));
+  }
+  return out;
+}
+
+// ---------- 棋盘状态与拖动逻辑（与 DOM 无关，方便独立测试） ----------
+function createBoard(pairs, n) {
+  const cells = n * n;
+  const b = {
+    n, cells,
+    pairs: pairs.map(pr => pr.slice()),
+    endOwner: new Int8Array(cells).fill(-1),
+    occ: new Int8Array(cells).fill(-1),
+    paths: pairs.map(() => []),
+    complete: pairs.map(() => false),
+  };
+  b.pairs.forEach(([a, c], i) => {
+    b.endOwner[a] = i; b.endOwner[c] = i;
+    b.occ[a] = i; b.occ[c] = i;
+  });
+  return b;
+}
+
+function boardClearColor(b, ci) {
+  for (const c of b.paths[ci]) b.occ[c] = -1;
+  b.paths[ci] = [];
+  b.complete[ci] = false;
+  b.occ[b.pairs[ci][0]] = ci;
+  b.occ[b.pairs[ci][1]] = ci;
+}
+
+// 在某个格子上按下：返回 {ci, target} 或 null
+function boardStartAt(b, cell) {
+  const ci = b.endOwner[cell];
+  if (ci >= 0) {
+    boardClearColor(b, ci);
+    b.occ[cell] = ci;
+    b.paths[ci] = [cell];
+    b.complete[ci] = false;
+    return { ci, target: b.pairs[ci][0] === cell ? b.pairs[ci][1] : b.pairs[ci][0] };
+  }
+  const k = b.occ[cell];
+  if (k >= 0 && !b.complete[k]) {
+    const path = b.paths[k];
+    const at = path.indexOf(cell);
+    if (at >= 0) {
+      for (let j = path.length - 1; j > at; j--) { b.occ[path[j]] = -1; path.pop(); }
+      b.complete[k] = false;
+      return { ci: k, target: b.pairs[k][0] === path[0] ? b.pairs[k][1] : b.pairs[k][0] };
+    }
+  }
+  return null;
+}
+
+// 拖到某格；返回是否发生了改动
+function boardExtend(b, drag, target) {
+  if (!drag) return false;
+  const n = b.n, path = b.paths[drag.ci];
+  let changed = false, guard = 0;
+  while (guard++ < n * n) {
+    const cur = path[path.length - 1];
+    if (cur === target) return changed;
+
+    if (path.length >= 2 && path[path.length - 2] === target) {   // 回退一格
+      b.occ[path.pop()] = -1;
+      b.complete[drag.ci] = false;
+      changed = true;
+      continue;
+    }
+    if (b.complete[drag.ci]) return changed;
+
+    const cr = rowOf(n, cur), cc = colOf(n, cur), tr = rowOf(n, target), tc = colOf(n, target);
+    let step = -1;
+    if (cr === tr && Math.abs(cc - tc) === 1) step = target;
+    else if (cc === tc && Math.abs(cr - tr) === 1) step = target;
+    else if (cr === tr) step = cr * n + cc + (tc > cc ? 1 : -1);
+    else if (cc === tc) step = (cr + (tr > cr ? 1 : -1)) * n + cc;
+    else return changed;
+
+    if (step === drag.target) {
+      b.occ[step] = drag.ci;
+      path.push(step);
+      b.complete[drag.ci] = true;
+      return true;
+    }
+    if (b.occ[step] !== -1) return changed;   // 被占用
+    if (b.endOwner[step] >= 0) return changed; // 别的颜色的端点
+    b.occ[step] = drag.ci;
+    path.push(step);
+    changed = true;
+  }
+  return changed;
+}
+
+function boardWon(b) {
+  for (let i = 0; i < b.cells; i++) if (b.occ[i] === -1) return false;
+  return b.complete.every(Boolean);
+}
+
+// ======================= CORE END =======================
+
+// ======================= UI =======================
+const COLORS = ['#ff6b6b', '#ffd166', '#4cc9f0', '#7be495', '#c77dff', '#ff9f43', '#f78fb3'];
+// 六关：5×5 两关 → 6×6 两关 → 7×7 两关（对数随棋盘加大）
+const ROUNDS = [
+  { n: 5, k: 2 },
+  { n: 5, k: 3 },
+  { n: 6, k: 3 },
+  { n: 6, k: 4 },
+  { n: 7, k: 4 },
+  { n: 7, k: 5 },
+];
+const PLAYER_NAMES = ['玩家 1', '玩家 2', '玩家 3', '玩家 4'];
+
+const app = {
+  started: false, t0: 0, raf: 0,
+  phase: 'ready',         // ready（等四人就位）→ countdown（3 秒）→ play
+  cdTimer: 0,             // 倒计时的 setTimeout 句柄
+  roundSets: null,        // 每关 4 副：四人布局各异、同对数、同难度
+  players: [],
+};
+
+const boardsEl = document.getElementById('boards');
+const statusEl = document.getElementById('status');
+const listEl = document.getElementById('board-list');
+const btnFull = document.getElementById('btnFull');
+const btnDemo = document.getElementById('btnDemo');
+const btnRestart = document.getElementById('btnRestart');
+
+function makePlayer(i) {
+  const panel = document.createElement('div');
+  panel.className = 'panel';
+  panel.innerHTML = `
+    <div class="phead">
+      <button class="pname name-slot">＋ 选姓名</button>
+      <div class="pmeta"><div class="round-dots">${ROUNDS.map(() => '<div class="dot"></div>').join('')}</div></div>
+    </div>
+    <div class="boardwrap">
+      <div class="stage">
+        <div class="stage-colors"></div>
+        <div class="stage-tip">把整块棋盘的格子全部走满</div>
+        <div class="stage-info">
+          <div class="round-label">第 1/6 关 · 2 对 · 5×5</div>
+          <div class="time">00:00.0</div>
+        </div>
+        <div class="count"></div>
+        <div class="badge"></div>
+      </div>
+      <canvas></canvas>
+      <div class="cover"><button class="ready-btn">开始</button></div>
+      <div class="namepop">
+        <div class="namepop-head"><span>点自己的名字</span><button class="ghost namepop-x">关闭</button></div>
+        <div class="namepop-list"></div>
+      </div>
+    </div>`;
+  boardsEl.appendChild(panel);
+
+  const p = {
+    i, panel,
+    canvas: panel.querySelector('canvas'),
+    ctx: panel.querySelector('canvas').getContext('2d'),
+    badge: panel.querySelector('.badge'),
+    stage: panel.querySelector('.stage'),
+    chips: panel.querySelector('.stage-colors'),
+    readyBtn: panel.querySelector('.ready-btn'),
+    cover: panel.querySelector('.cover'),
+    countEl: panel.querySelector('.count'),
+    dots: [...panel.querySelectorAll('.dot')],
+    timeEl: panel.querySelector('.time'),
+    roundEl: panel.querySelector('.round-label'),
+    nameSlot: panel.querySelector('.name-slot'),
+    namePop: panel.querySelector('.namepop'),
+    playerName: '',
+    size: 300, cell: 60, dpr: 1,
+    round: 0,
+    board: createBoard([], 5),
+    drag: null,           // {ci, target, pointerId}
+    finished: false, finishTime: 0, rank: 0,
+    laps: [],
+  };
+
+  p.nameSlot.addEventListener('click', () => {
+    if (app.phase !== 'ready') return;
+    openNamePop(p);
+  });
+  p.namePop.querySelector('.namepop-x').addEventListener('click', () => closeNamePop(p));
+
+  p.readyBtn.addEventListener('click', () => setReady(p));
+  bindPointer(p);
+  const ro = new ResizeObserver(() => fitCanvas(p));
+  ro.observe(p.panel.querySelector('.boardwrap'));
+  app.players.push(p);
+  return p;
+}
+
+function fitCanvas(p) {
+  const wrap = p.panel.querySelector('.boardwrap');
+  const w = wrap.clientWidth, h = wrap.clientHeight;
+  const s = Math.max(120, Math.min(w, h));
+  p.size = s;
+  p.cell = s / (p.board ? p.board.n : 5);
+  p.dpr = Math.min(2, window.devicePixelRatio || 1);
+  p.canvas.style.width = s + 'px';
+  p.canvas.style.height = s + 'px';
+  p.canvas.width = Math.round(s * p.dpr);
+  p.canvas.height = Math.round(s * p.dpr);
+  p.ctx.setTransform(p.dpr, 0, 0, p.dpr, 0, 0);
+  p.cover.style.width = s + 'px';
+  p.cover.style.height = s + 'px';
+  // 棋盘上方剩下的空档正好给颜色提示用
+  p.stage.style.height = Math.max(0, wrap.clientHeight - s) + 'px';
+  draw(p);
+}
+
+function loadRound(p, round) {
+  const cfg = ROUNDS[round];
+  const pairs = app.roundSets[round][p.i];
+  p.round = round;
+  p.board = createBoard(pairs, cfg.n);
+  p.cell = p.size / cfg.n;
+  p.drag = null;
+  p.badge.classList.remove('show');
+  p.stage.classList.remove('done');
+  p.roundEl.innerHTML = `第 ${round + 1}/${ROUNDS.length} 关 · ${pairs.length} 对 · ${cfg.n}×${cfg.n}`;
+  p.chips.innerHTML = pairs.map((_, ci) => `<div class="chip" style="background:${COLORS[ci]}"></div>`).join('');
+  p.dots.forEach((d, i) => {
+    d.className = 'dot' + (i < round ? ' done' : i === round ? ' now' : '');
+  });
+  draw(p);
+}
+
+// ---------- 准备 → 倒计时 → 开始 ----------
+// 只有"准备"阶段盖住棋盘并模糊，防止提前看题
+function applyPhaseVisual() {
+  const prep = app.phase === 'ready';
+  app.players.forEach(p => {
+    p.cover.style.display = prep ? '' : 'none';
+    p.canvas.classList.toggle('hide-layout', prep);
+  });
+}
+
+function resetPanel(p) {
+  p.finished = false; p.finishTime = 0; p.rank = 0; p.ready = false;
+  p.laps = [];
+  p.badge.classList.remove('show');
+  p.stage.classList.remove('done');
+  p.countEl.classList.remove('show');
+  p.stage.classList.remove('cd');
+  p.readyBtn.style.display = '';
+  p.readyBtn.disabled = false;
+  p.readyBtn.textContent = '开始';
+  p.readyBtn.classList.remove('on');
+  p.timeEl.className = 'time';
+  p.timeEl.textContent = '00:00.0';
+  loadRound(p, 0);
+}
+
+// 回到"四人各自准备"的状态（不自动开始）
+function armGame(newPuzzles) {
+  if (newPuzzles || !app.roundSets) {
+    app.roundSets = ROUNDS.map(r => buildRoundSet(r.k, r.n, Math.random, app.players.length || 4));
+  }
+  app.sessionId = uuid();          // 同一局的四个人共用一个场次号，方便后台核对
+  app.phase = 'ready';
+  app.started = false;
+  app.t0 = 0;
+  if (app.cdTimer) { clearTimeout(app.cdTimer); app.cdTimer = 0; }
+  app.players.forEach(resetPanel);
+  applyPhaseVisual();
+  statusEl.textContent = '四人各按自己棋盘上的「开始」';
+  updateBoardList();
+}
+
+function readyCount() { return app.players.filter(p => p.ready).length; }
+
+function setReady(p) {
+  if (app.phase !== 'ready' || p.ready) return;
+  if (!p.playerName) {                       // 没选姓名不让就位，免得榜单里全是空白
+    openNamePop(p);
+    statusEl.textContent = '先点棋盘上方选自己的姓名';
+    return;
+  }
+  p.ready = true;
+  p.readyBtn.textContent = '已准备 ✓';
+  p.readyBtn.classList.add('on');
+  p.readyBtn.disabled = true;
+  const n = readyCount();
+  statusEl.textContent = `已就位 ${n}/${app.players.length}`;
+  if (n === app.players.length) beginCountdown();
+}
+
+function beginCountdown() {
+  app.phase = 'countdown';
+  applyPhaseVisual();                 // 掀开模糊层，让大家看清题面
+  let n = 3;
+  const paint = (v) => {
+    app.players.forEach(p => {
+      p.stage.classList.add('cd');
+      p.countEl.textContent = v;
+      p.countEl.classList.add('show');
+    });
+  };
+  paint(n);
+  statusEl.textContent = '3 秒后开始…';
+  const step = () => {
+    n--;
+    if (n > 0) { paint(n); statusEl.textContent = `${n} 秒后开始…`; app.cdTimer = setTimeout(step, 1000); return; }
+    startPlay();
+  };
+  app.cdTimer = setTimeout(step, 1000);
+}
+
+function startPlay() {
+  app.cdTimer = 0;
+  app.phase = 'play';
+  app.started = true;
+  app.t0 = performance.now();
+  applyPhaseVisual();
+  app.players.forEach(p => {
+    p.countEl.classList.remove('show');
+    p.stage.classList.remove('cd');
+    p.ready = false;
+    p.timeEl.className = 'time';
+    p.timeEl.textContent = '00:00.0';
+    loadRound(p, 0);
+  });
+  statusEl.textContent = '计时中…';
+  updateBoardList();
+  if (!app.raf) app.raf = requestAnimationFrame(tick);
+}
+
+function tick(now) {
+  app.raf = requestAnimationFrame(tick);
+  if (!app.started) return;
+  const el = performance.now() - app.t0;
+  let doneCount = 0;
+  for (const p of app.players) {
+    if (p.finished) { doneCount++; continue; }
+    p.timeEl.textContent = fmt(el);
+  }
+  if (doneCount === app.players.length) statusEl.textContent = '全部完成，看排行榜';
+  else if (doneCount > 0) statusEl.textContent = `已完成 ${doneCount} / 4`;
+  else statusEl.textContent = '计时中…';
+}
+
+function fmt(ms) {
+  const t = Math.max(0, ms) / 1000;
+  const m = Math.floor(t / 60);
+  const s = t - m * 60;
+  return String(m).padStart(2, '0') + ':' + (s < 10 ? '0' : '') + s.toFixed(1);
+}
+
+function cellFromEvent(p, e) {
+  const n = p.board.n;
+  const r = p.canvas.getBoundingClientRect();
+  const x = (e.clientX - r.left) / r.width * n;
+  const y = (e.clientY - r.top) / r.height * n;
+  if (x < 0 || y < 0 || x >= n || y >= n) return -1;
+  return Math.floor(y) * n + Math.floor(x);
+}
+
+function bindPointer(p) {
+  const c = p.canvas;
+  c.addEventListener('pointerdown', e => {
+    if (!app.started || p.finished) return;
+    if (p.drag) return;                       // 同一块棋盘已在拖拽
+    const cell = cellFromEvent(p, e);
+    if (cell < 0) return;
+    const d = boardStartAt(p.board, cell);
+    if (!d) return;
+    p.drag = { ci: d.ci, target: d.target, pointerId: e.pointerId };
+    c.setPointerCapture(e.pointerId);
+    e.preventDefault();
+    draw(p);
+  }, { passive: false });
+
+  c.addEventListener('pointermove', e => {
+    if (!p.drag || e.pointerId !== p.drag.pointerId) return;
+    const cell = cellFromEvent(p, e);
+    if (cell < 0) return;
+    const changed = boardExtend(p.board, p.drag, cell);
+    if (changed) draw(p);
+    if (boardWon(p.board) && !p.finished) finishPlayer(p);
+    e.preventDefault();
+  }, { passive: false });
+
+  const endDrag = e => {
+    if (!p.drag || e.pointerId !== p.drag.pointerId) return;
+    p.drag = null;
+    draw(p);
+  };
+  c.addEventListener('pointerup', endDrag);
+  c.addEventListener('pointercancel', endDrag);
+  c.addEventListener('lostpointercapture', endDrag);
+}
+
+function finishPlayer(p) {
+  const lap = Math.round(performance.now() - app.t0);
+  p.laps.push(lap);
+  if (p.round < ROUNDS.length - 1) {
+    p.round++;
+    const idx = p.round;
+    p.panel.classList.remove('flash');
+    void p.panel.offsetWidth;
+    p.panel.classList.add('flash');
+    loadRound(p, idx);
+    return;
+  }
+  p.finished = true;
+  p.finishTime = lap;
+  p.timeEl.textContent = fmt(p.finishTime);
+  p.timeEl.className = 'time small';
+  p.rank = app.players.filter(q => q.finished).length;
+  p.badge.innerHTML = `<div class="b1">第 ${p.rank} 名</div><div class="b2">用时 ${fmt(p.finishTime)}</div><div class="b3">成绩上传中…</div>`;
+  p.badge.classList.add('show');
+  p.stage.classList.add('done');
+  updateBoardList();
+  if (p.rank === 1) statusEl.textContent = '有人完成了！';
+  uploadScore(p);
+}
+
+function updateBoardList() {
+  const nameOf = p => p.playerName || PLAYER_NAMES[p.i];
+  const fin = app.players.filter(p => p.finished).sort((a, b) => a.finishTime - b.finishTime);
+  const rest = app.players.filter(p => !p.finished);
+  if (!fin.length) { listEl.textContent = '排行榜将在完成后显示'; return; }
+  const parts = fin.map((p, i) => `${i + 1}. ${nameOf(p)} ${fmt(p.finishTime)}`);
+  const tail = rest.length ? `　｜　进行中：${rest.map(nameOf).join('、')}` : '';
+  listEl.textContent = parts.join('　') + tail;
+}
+
+// ---------- 绘制 ----------
+function draw(p) {
+  const ctx = p.ctx, s = p.size, cell = p.cell;
+  const n = p.board.n;
+  ctx.clearRect(0, 0, s, s);
+  ctx.fillStyle = '#0f1428';
+  ctx.fillRect(0, 0, s, s);
+
+  // 网格
+  ctx.strokeStyle = '#242b4a';
+  ctx.lineWidth = Math.max(1, cell * 0.02);
+  for (let i = 1; i < n; i++) {
+    ctx.beginPath(); ctx.moveTo(i * cell, 0); ctx.lineTo(i * cell, s); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, i * cell); ctx.lineTo(s, i * cell); ctx.stroke();
+  }
+
+  // 线
+  const b = p.board;
+  for (let ci = 0; ci < b.paths.length; ci++) {
+    const path = b.paths[ci];
+    if (path.length < 2) continue;
+    ctx.strokeStyle = COLORS[ci];
+    ctx.globalAlpha = b.complete[ci] ? 0.95 : 0.8;
+    ctx.lineWidth = cell * 0.4;
+    ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+    ctx.beginPath();
+    for (let j = 0; j < path.length; j++) {
+      const x = (colOf(n, path[j]) + 0.5) * cell, y = (rowOf(n, path[j]) + 0.5) * cell;
+      j ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+    }
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+  }
+
+  // 端点
+  for (let ci = 0; ci < b.pairs.length; ci++) {
+    for (const e of b.pairs[ci]) {
+      const x = (colOf(n, e) + 0.5) * cell, y = (rowOf(n, e) + 0.5) * cell;
+      const r = cell * 0.29;
+      ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.fillStyle = COLORS[ci]; ctx.fill();
+      if (b.complete[ci]) {
+        ctx.strokeStyle = '#ffffff'; ctx.lineWidth = Math.max(2, cell * 0.05);
+        ctx.beginPath(); ctx.arc(x, y, r + cell * 0.09, 0, Math.PI * 2); ctx.stroke();
+      } else {
+        ctx.strokeStyle = 'rgba(255,255,255,.35)'; ctx.lineWidth = Math.max(1.5, cell * 0.03);
+        ctx.beginPath(); ctx.arc(x, y, r + cell * 0.06, 0, Math.PI * 2); ctx.stroke();
+      }
+    }
+  }
+}
+
+// ---------- 玩法演示（遮罩层动画） ----------
+// 固定一道 5×5 双色题：第一条线走 12 格，第二条 13 格，中途故意撞一次已画好的线
+const DEMO_GRID = 5;
+const DEMO = {
+  pairs: [[20, 7], [6, 18]],
+  segs: [
+    [20, 15, 10, 5, 0, 1, 2, 3, 4, 9, 8, 7],
+    [6, 11, 16, 21, 22, 23, 24, 19, 14, 13, 12, 17, 18],
+  ],
+  errAt: 2,        // 第二条线走到第 3 格时，手指往红线上撞
+  errCell: 15,     // 被挡住的那一格（属于第一条线）
+};
+// 时间轴（毫秒）
+const DT = {
+  intro: 1500,
+  red: 1500, redStep: 105,
+  hold: 2680,
+  yelLead: 3120,
+  yel1: 3400, yelStep1: 108,
+  err: 3400 + 3 * 108, errDur: 820,
+  resume: 3400 + 3 * 108 + 820,
+  yelStep2: 100,
+  done: 3400 + 3 * 108 + 820 + 10 * 100,
+  cycle: 3400 + 3 * 108 + 820 + 10 * 100 + 1750,
+};
+
+const demoLayer = document.getElementById('demo');
+const demoCv = document.getElementById('demoCanvas');
+const demoCtx = demoCv.getContext('2d');
+const demoTipEl = document.getElementById('demoTip');
+const demoState = { on: false, raf: 0, t0: 0, size: 520, dpr: 1 };
+
+function demoResize() {
+  const w = demoCv.getBoundingClientRect().width || 520;
+  demoState.size = w;
+  demoState.dpr = Math.min(2, window.devicePixelRatio || 1);
+  demoCv.width = Math.round(w * demoState.dpr);
+  demoCv.height = Math.round(w * demoState.dpr);
+  demoCtx.setTransform(demoState.dpr, 0, 0, demoState.dpr, 0, 0);
+}
+
+const demoPt = (c, cell) => ({ x: (c % DEMO_GRID + 0.5) * cell, y: (Math.floor(c / DEMO_GRID) + 0.5) * cell });
+
+// 把时间换算成"每条线画到第几格 + 格内小数进度"
+function demoProgress(t) {
+  const L1 = DEMO.segs[0].length, L2 = DEMO.segs[1].length;
+  const a = { upto: -1, frac: 0 }, b = { upto: -1, frac: 0 };
+  let errT = -1;
+  if (t >= DT.red) {
+    const p = Math.min((t - DT.red) / DT.redStep, L1 - 1);
+    a.upto = Math.floor(p); a.frac = p - a.upto;
+  }
+  if (t >= DT.yel1) {
+    if (t < DT.err) {
+      const p = Math.min((t - DT.yel1) / DT.yelStep1, DEMO.errAt);
+      b.upto = Math.floor(p); b.frac = p - b.upto;
+    } else if (t < DT.resume) {
+      b.upto = DEMO.errAt; b.frac = 0; errT = t - DT.err;
+    } else {
+      const p = DEMO.errAt + (t - DT.resume) / DT.yelStep2;
+      b.upto = Math.min(Math.floor(p), L2 - 1);
+      b.frac = b.upto < L2 - 1 ? p - b.upto : 0;
+    }
+  }
+  return { a, b, errT };
+}
+
+// 画一条还没画完的线，返回线头坐标
+function demoTrace(prog, path, cell, color) {
+  if (prog.upto < 0) return null;
+  const ctx = demoCtx;
+  ctx.strokeStyle = color;
+  ctx.lineWidth = cell * 0.4;
+  ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+  ctx.beginPath();
+  const s = demoPt(path[0], cell);
+  ctx.moveTo(s.x, s.y);
+  for (let i = 1; i <= prog.upto; i++) { const p = demoPt(path[i], cell); ctx.lineTo(p.x, p.y); }
+  let last = demoPt(path[prog.upto], cell);
+  if (prog.upto < path.length - 1 && prog.frac > 0) {
+    const nx = demoPt(path[prog.upto + 1], cell);
+    last = { x: last.x + (nx.x - last.x) * prog.frac, y: last.y + (nx.y - last.y) * prog.frac };
+    ctx.lineTo(last.x, last.y);
+  }
+  ctx.stroke();
+  return last;
+}
+
+function demoDraw(t) {
+  const S = demoState.size, cell = S / DEMO_GRID, ctx = demoCtx;
+  ctx.clearRect(0, 0, S, S);
+  ctx.fillStyle = '#0f1428';
+  ctx.fillRect(0, 0, S, S);
+
+  // 网格
+  ctx.strokeStyle = '#242b4a';
+  ctx.lineWidth = Math.max(1, cell * 0.02);
+  for (let i = 1; i < DEMO_GRID; i++) {
+    ctx.beginPath(); ctx.moveTo(i * cell, 0); ctx.lineTo(i * cell, S); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, i * cell); ctx.lineTo(S, i * cell); ctx.stroke();
+  }
+
+  const pr = demoProgress(t);
+  const L1 = DEMO.segs[0].length, L2 = DEMO.segs[1].length;
+  const redDone = pr.a.upto >= L1 - 1;
+  const yelDone = pr.b.upto >= L2 - 1;
+  const allDone = redDone && yelDone;
+
+  // 已画的线
+  const redHead = demoTrace(pr.a, DEMO.segs[0], cell, COLORS[0]);
+  const yelHead = demoTrace(pr.b, DEMO.segs[1], cell, COLORS[1]);
+
+  // 终点全部连通后，给整盘格子描一圈绿边，强调“走满”
+  if (allDone) {
+    const k = 0.5 + 0.5 * Math.sin(t / 220);
+    ctx.strokeStyle = `rgba(123,228,149,${0.22 + 0.26 * k})`;
+    ctx.lineWidth = Math.max(2, cell * 0.06);
+    for (let i = 0; i < DEMO_GRID * DEMO_GRID; i++) {
+      const p = demoPt(i, cell);
+      ctx.strokeRect(p.x - cell / 2 + 2, p.y - cell / 2 + 2, cell - 4, cell - 4);
+    }
+  }
+
+  // 端点
+  for (let ci = 0; ci < 2; ci++) {
+    const done = ci === 0 ? redDone : yelDone;
+    for (const e of DEMO.pairs[ci]) {
+      const p = demoPt(e, cell);
+      const introPulse = t < DT.intro ? 1 + 0.07 * Math.sin(t / 150) : 1;
+      const r = cell * 0.29 * introPulse;
+      ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
+      ctx.fillStyle = COLORS[ci]; ctx.fill();
+      ctx.beginPath(); ctx.arc(p.x, p.y, r + cell * (done ? 0.1 : 0.07), 0, Math.PI * 2);
+      ctx.strokeStyle = done ? '#ffffff' : 'rgba(255,255,255,.35)';
+      ctx.lineWidth = Math.max(2, cell * (done ? 0.06 : 0.035));
+      ctx.stroke();
+    }
+  }
+
+  // 撞线示范：手指想进这一格，格子上冒出“禁止”标记并被顶回去
+  if (pr.errT >= 0) {
+    const p = demoPt(DEMO.errCell, cell);
+    const a = Math.min(1, pr.errT / 120) * (pr.errT > DT.errDur - 160 ? (DT.errDur - pr.errT) / 160 : 1);
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, a);
+    ctx.beginPath(); ctx.arc(p.x, p.y, cell * 0.33, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(8,12,24,.92)'; ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,.92)';
+    ctx.lineWidth = Math.max(2, cell * 0.05);
+    ctx.stroke();
+    const q = cell * 0.15;
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = Math.max(3, cell * 0.075);
+    ctx.beginPath(); ctx.moveTo(p.x - q, p.y - q); ctx.lineTo(p.x + q, p.y + q); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(p.x + q, p.y - q); ctx.lineTo(p.x - q, p.y + q); ctx.stroke();
+    ctx.restore();
+  }
+
+  // 手指光标
+  let cursor = null;
+  if (t >= DT.red && t < DT.hold) cursor = redHead;
+  else if (t >= DT.yelLead && t < DT.done) {
+    if (pr.errT >= 0) {
+      // 朝被占格方向顶一段，然后弹回并轻微抖
+      const from = demoPt(DEMO.segs[1][DEMO.errAt], cell), to = demoPt(DEMO.errCell, cell);
+      const bump = Math.min(1, pr.errT / 300) * (pr.errT < 380 ? 1 : 0.85);
+      const shake = pr.errT > 300 ? Math.sin(pr.errT / 26) * cell * 0.05 : 0;
+      cursor = {
+        x: from.x + (to.x - from.x) * 0.45 * bump + shake,
+        y: from.y + (to.y - from.y) * 0.45 * bump,
+      };
+    } else cursor = yelHead;
+  } else if (t >= DT.hold && t < DT.yelLead && redHead) cursor = redHead;
+
+  if (cursor) {
+    ctx.beginPath(); ctx.arc(cursor.x, cursor.y, cell * 0.33, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255,255,255,.16)'; ctx.fill();
+    ctx.beginPath(); ctx.arc(cursor.x, cursor.y, cell * 0.33, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(255,255,255,.9)'; ctx.lineWidth = Math.max(2, cell * 0.05); ctx.stroke();
+    ctx.beginPath(); ctx.arc(cursor.x, cursor.y, cell * 0.09, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255,255,255,.9)'; ctx.fill();
+  }
+
+  // 通关提示：整盘被占满后，外框呼吸式发光（不写字盖住题目）
+  if (allDone) {
+    const g = 0.55 + 0.45 * Math.sin(t / 240);
+    ctx.save();
+    ctx.strokeStyle = `rgba(123,228,149,${0.55 + 0.35 * g})`;
+    ctx.lineWidth = Math.max(3, cell * 0.08);
+    ctx.shadowColor = 'rgba(123,228,149,.9)';
+    ctx.shadowBlur = cell * 0.45;
+    ctx.strokeRect(ctx.lineWidth / 2, ctx.lineWidth / 2, S - ctx.lineWidth, S - ctx.lineWidth);
+    ctx.restore();
+  }
+
+  // 提示文字
+  let tip;
+  if (t < DT.intro) tip = '① 同色的两个圆点，用一条线连起来';
+  else if (t < DT.hold) tip = '② 按住圆点，沿着一格一格往外拖';
+  else if (t < DT.yel1) tip = '③ 拖到另一个同色圆点，这条线就成了';
+  else if (t < DT.err) tip = '换一种颜色，一样从圆点拖到圆点';
+  else if (t < DT.resume) tip = '④ 不能穿过画好的线——手指会被挡住';
+  else if (t < DT.done) tip = '绕开它，把剩下的格子继续走满';
+  else tip = '⑤ 每个格子都被占到 —— 过关！';
+  if (demoTipEl.textContent !== tip) {
+    demoTipEl.textContent = tip;
+    demoTipEl.style.color = allDone ? '#7be495' : '#ffd166';
+  }
+}
+
+function demoLoop(now) {
+  if (!demoState.on) return;
+  let el = now - demoState.t0;
+  if (el >= DT.cycle) { demoState.t0 = now; el = 0; }
+  demoDraw(el);
+  demoState.raf = requestAnimationFrame(demoLoop);
+}
+
+function openDemo() {
+  demoLayer.classList.add('show');
+  demoState.on = true;
+  demoResize();
+  demoState.t0 = performance.now();
+  if (demoState.raf) cancelAnimationFrame(demoState.raf);
+  demoState.raf = requestAnimationFrame(demoLoop);
+}
+
+function closeDemo() {
+  demoState.on = false;
+  demoLayer.classList.remove('show');
+  if (demoState.raf) cancelAnimationFrame(demoState.raf);
+  demoState.raf = 0;
+}
+
+btnDemo.onclick = openDemo;
+document.getElementById('demoReplay').onclick = () => { demoState.t0 = performance.now(); };
+document.getElementById('demoClose').onclick = closeDemo;
+
+// ---------- 重新开始 ----------
+// 比赛进行中先点一次变红提示，再点才真的重开（免得课堂上一碰就把进度清了）
+let restartAt = 0, restartTimer = 0;
+btnRestart.onclick = () => {
+  const running = app.phase === 'play' || app.phase === 'countdown';
+  if (running && performance.now() - restartAt > 2600) {
+    restartAt = performance.now();
+    btnRestart.textContent = '再点一次确认';
+    btnRestart.classList.add('warn');
+    clearTimeout(restartTimer);
+    restartTimer = setTimeout(() => {
+      restartAt = 0;
+      btnRestart.textContent = '重新开始';
+      btnRestart.classList.remove('warn');
+    }, 2600);
+    return;
+  }
+  clearTimeout(restartTimer);
+  restartAt = 0;
+  btnRestart.classList.remove('warn');
+  btnRestart.disabled = true;
+  btnRestart.textContent = '出题中…';
+  setTimeout(() => {          // 先让按钮文字刷新出来，再同步出题
+    armGame(true);             // 重新出题，回到"四人各自准备"
+    btnRestart.textContent = '重新开始';
+    btnRestart.disabled = false;
+  }, 60);
+};
+
+// ======================= 班级 / 姓名 / 上传 / 榜单 =======================
+const CLASS_CODE = (new URLSearchParams(location.search).get('c') || '').trim();
+const SB_URL = 'https://ixnuxflxdthnismazwvd.supabase.co/rest/v1';
+const SB_KEY = 'sb_publishable_GZaeyxzqRbkPMy8QkV5qlA_hT8tHsWs';
+
+const classTag = document.getElementById('classTag');
+const boardLayer = document.getElementById('boardLayer');
+const rankListEl = document.getElementById('rankList');
+const rankNoteEl = document.getElementById('rankNote');
+const rankTabsEl = document.getElementById('rankTabs');
+const btnRank = document.getElementById('btnRank');
+const btnNames = document.getElementById('btnNames');
+const nameLayer = document.getElementById('nameLayer');
+const nameInput = document.getElementById('nameInput');
+const nameCountEl = document.getElementById('nameCount');
+const homeRankEl = document.getElementById('homeRank');
+const classInput = document.getElementById('classInput');
+const btnEnter = document.getElementById('btnEnter');
+
+function uuid() {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+    const r = Math.random() * 16 | 0;
+    return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+  });
+}
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g,
+  m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+const maskName = n => { const s = String(n || ''); return s.length <= 1 ? (s || '—') : s[0] + '＊'; };
+function dateShort(s) {
+  const d = new Date(s);
+  return isNaN(d) ? '' : (d.getMonth() + 1) + '-' + String(d.getDate()).padStart(2, '0');
+}
+
+// ---------- 名单（只存本机 localStorage，不上传） ----------
+const NAMES_KEY = 'jz_names_' + (CLASS_CODE || 'home');
+function getNames() {
+  try { const a = JSON.parse(localStorage.getItem(NAMES_KEY) || '[]'); return Array.isArray(a) ? a : []; }
+  catch (e) { return []; }
+}
+function setNames(a) { try { localStorage.setItem(NAMES_KEY, JSON.stringify(a)); } catch (e) { } }
+
+function openNamePop(p) {
+  if (app.phase !== 'ready') return;
+  renderNamePop(p);
+  p.namePop.classList.add('show');
+}
+function closeNamePop(p) { p.namePop.classList.remove('show'); }
+
+function renderNamePop(p) {
+  const list = p.namePop.querySelector('.namepop-list');
+  const names = getNames();
+  const taken = new Set(app.players.filter(q => q !== p && q.playerName).map(q => q.playerName));
+  let html = '';
+  if (!names.length) {
+    html += `<div class="namepop-empty">还没有名单。<br>请老师点左上角「名单」导入全班名字，或直接在下面输入。</div>`;
+  } else {
+    html += names.map(nm => {
+      const busy = taken.has(nm) && nm !== p.playerName;
+      return `<button data-nm="${esc(nm)}" class="${busy ? 'taken' : ''}">${esc(nm)}</button>`;
+    }).join('');
+  }
+  html += `<div class="namepop-own"><input placeholder="没有我的名字？在这里打" maxlength="12"><button>确定</button></div>`;
+  list.innerHTML = html;
+
+  list.querySelectorAll('button[data-nm]').forEach(b => {
+    if (b.classList.contains('taken')) return;
+    b.onclick = () => setPlayerName(p, b.dataset.nm);
+  });
+  const inp = list.querySelector('input');
+  const ok = list.querySelector('.namepop-own button');
+  const commit = () => { const v = inp.value.trim(); if (v) setPlayerName(p, v); };
+  ok.onclick = commit;
+  inp.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); commit(); } };
+}
+
+function setPlayerName(p, name) {
+  p.playerName = name;
+  p.nameSlot.textContent = name;
+  p.nameSlot.classList.add('sel');
+  closeNamePop(p);
+  const n = app.players.filter(q => q.playerName).length;
+  statusEl.textContent = `已选姓名 ${n}/${app.players.length}`;
+}
+
+// ---------- 成绩上传 ----------
+async function uploadScore(p) {
+  const el = p.badge.querySelector('.b3');
+  if (!CLASS_CODE) { if (el) el.textContent = '练习模式，不上传'; return; }
+  try {
+    const r = await fetch(SB_URL + '/scores', {
+      method: 'POST',
+      headers: {
+        apikey: SB_KEY,
+        Authorization: 'Bearer ' + SB_KEY,
+        'Content-Type': 'application/json',
+        Prefer: 'return=minimal',
+      },
+      body: JSON.stringify({
+        session_id: app.sessionId,
+        class_code: CLASS_CODE,
+        player_name: p.playerName || '匿名',
+        total_ms: Math.round(p.finishTime),
+        rounds: p.laps,
+      }),
+    });
+    if (!r.ok) {
+      const t = await r.text();
+      throw new Error('HTTP ' + r.status + ' ' + t.slice(0, 120));
+    }
+    if (el) { el.textContent = '成绩已上榜 ✓'; el.style.color = '#7be495'; }
+  } catch (e) {
+    const code = (e.message.match(/HTTP (\d+)/) || [])[1] || '';
+    if (el) {
+      el.textContent = code ? '上传失败（' + code + '）' : '网络未连上，未上传';
+      el.style.color = '#ff9f43';
+    }
+    console.warn('[score] upload failed:', e.message);
+  }
+}
+
+// ---------- 榜单 ----------
+async function fetchRank(cls) {
+  let url = SB_URL + '/leaderboard?select=class_code,player_name,total_ms,created_at&order=total_ms.asc&limit=60';
+  if (cls) url += '&class_code=eq.' + encodeURIComponent(cls);
+  const r = await fetch(url, { headers: { apikey: SB_KEY } });
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  return r.json();
+}
+
+function renderRank(el, rows, mask) {
+  const top = rows.slice(0, 10);
+  if (!top.length) { el.innerHTML = '<div class="rank-empty">还没有成绩，快去通关吧</div>'; return; }
+  el.innerHTML = top.map((r, i) => `
+    <div class="rank-row">
+      <div class="rank-no top${i}">${i + 1}</div>
+      <div class="rank-name">${esc(mask ? maskName(r.player_name) : r.player_name)}</div>
+      <div class="rank-class">${esc(r.class_code)} 班</div>
+      <div class="rank-time">${fmt(r.total_ms)}</div>
+      <div class="rank-date">${dateShort(r.created_at)}</div>
+    </div>`).join('');
+}
+
+let rankTab = 'all';
+btnRank.onclick = () => { boardLayer.classList.add('show'); refreshRank(); };
+document.getElementById('rankClose').onclick = () => boardLayer.classList.remove('show');
+document.getElementById('rankRefresh').onclick = refreshRank;
+rankTabsEl.querySelectorAll('button').forEach(b => {
+  b.onclick = () => {
+    if (b.dataset.tab === 'cls' && !CLASS_CODE) return;
+    rankTab = b.dataset.tab;
+    rankTabsEl.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
+    refreshRank();
+  };
+});
+
+async function refreshRank() {
+  rankNoteEl.textContent = '读取中…';
+  try {
+    const rows = await fetchRank(rankTab === 'cls' && CLASS_CODE ? CLASS_CODE : '');
+    renderRank(rankListEl, rows, !CLASS_CODE);
+    rankNoteEl.textContent = '共 ' + rows.length + ' 条成绩 · 每人只取最快一次';
+  } catch (e) {
+    rankListEl.innerHTML = '<div class="rank-empty">读取失败，检查一下网络</div>';
+    rankNoteEl.textContent = '';
+  }
+}
+
+// ---------- 名单弹窗（老师用） ----------
+btnNames.onclick = () => {
+  nameInput.value = getNames().join('\n');
+  nameCountEl.textContent = '当前 ' + getNames().length + ' 人';
+  nameLayer.classList.add('show');
+};
+document.getElementById('nameClose').onclick = () => nameLayer.classList.remove('show');
+document.getElementById('nameSave').onclick = () => {
+  const arr = nameInput.value.split(/[\n,，、;；\s]+/).map(s => s.trim()).filter(Boolean).slice(0, 80);
+  setNames(arr);
+  nameCountEl.textContent = '已保存 ' + arr.length + ' 人';
+  statusEl.textContent = '名单已保存，学生点姓名即可';
+};
+
+// ---------- 首页：班级入口 + 总榜 ----------
+function enterHomeMode() {
+  document.body.classList.add('home-mode');
+  document.title = '四人解阵 · 班级排行榜';
+  btnRank.textContent = '排行榜';
+  btnEnter.onclick = () => {
+    const v = classInput.value.trim();
+    if (!v) { classInput.focus(); return; }
+    location.href = location.pathname + '?c=' + encodeURIComponent(v);
+  };
+  classInput.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); btnEnter.click(); } };
+  homeRankEl.innerHTML = '<div class="rank-empty">读取中…</div>';
+  fetchRank('')
+    .then(rows => renderRank(homeRankEl, rows, true))
+    .catch(() => { homeRankEl.innerHTML = '<div class="rank-empty">读取失败，检查一下网络</div>'; });
+}
+
+// ---------- 初始化 ----------
+if (!CLASS_CODE) {
+  enterHomeMode();              // 不带 ?c= 时是首页：班级入口 + 总榜
+} else {
+  app.players = [];
+  for (let i = 0; i < 4; i++) makePlayer(i);
+
+  // 先出好题并预览（准备工作），四人各自按棋盘上的「开始」就位后倒计时 3 秒
+  app.phase = 'ready';
+  app.sessionId = uuid();
+  app.roundSets = ROUNDS.map(r => buildRoundSet(r.k, r.n, Math.random, 4));
+  app.players.forEach(resetPanel);
+  applyPhaseVisual();
+  statusEl.textContent = '先选姓名，再按棋盘上的「开始」';
+  classTag.textContent = ' · ' + CLASS_CODE + ' 班';
+  document.title = '四人解阵 · ' + CLASS_CODE + ' 班';
+}
+
+btnFull.onclick = () => {
+  if (!document.fullscreenElement) document.documentElement.requestFullscreen?.();
+  else document.exitFullscreen?.();
+};
+window.addEventListener('keydown', e => {
+  if (demoState.on) {                                // 演示中：空格 / Esc / 回车只用来关演示
+    if (e.code === 'Space' || e.code === 'Escape' || e.code === 'Enter') {
+      e.preventDefault();
+      closeDemo();
+    }
+    return;
+  }
+  if (e.code === 'Space') {                          // 教师用：一键让四人都就位
+    e.preventDefault();
+    if (app.phase === 'ready') {
+      if (app.players.some(p => !p.playerName)) { statusEl.textContent = '还有同学没选姓名'; return; }
+      app.players.forEach(p => setReady(p));
+    }
+  }
+});
+window.addEventListener('resize', () => {
+  app.players.forEach(fitCanvas);
+  if (demoState.on) { demoResize(); demoDraw(performance.now() - demoState.t0); }
+});
+document.addEventListener('contextmenu', e => e.preventDefault());
+document.addEventListener('gesturestart', e => e.preventDefault());
+document.addEventListener('dblclick', e => e.preventDefault());
+app.players.forEach(p => setTimeout(() => fitCanvas(p), 0));
+</script>
+</body>
+</html>
