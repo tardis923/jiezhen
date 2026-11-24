@@ -40,20 +40,29 @@
     border-radius:18px; padding:7px 10px 3px; display:flex; flex-direction:column; min-height:0; min-width:0;
     position:relative; overflow:hidden;
   }
-  .phead{flex:0 0 auto; display:flex; align-items:center; justify-content:space-between; gap:8px; padding:0 4px 2px;}
+  .phead{flex:0 0 auto; display:flex; align-items:center; gap:8px; padding:0 4px 4px;}
   .pname{font-size:20px; font-weight:800; letter-spacing:1px;}
-  .pmeta{display:flex; align-items:center; gap:10px;}
-  .round-dots{display:flex; gap:5px;}
-  .dot{width:11px; height:11px; border-radius:50%; background:#39406a; border:1px solid #4a5488;}
-  .dot.done{background:#5ce08a; border-color:#5ce08a;}
-  .dot.now{background:#ffd166; border-color:#ffd166; box-shadow:0 0 10px #ffd16688;}
   .pfoot{flex:0 0 auto; display:flex; align-items:flex-end; justify-content:space-between; gap:8px; padding:6px 4px 2px;}
-  .round-label{font-size:16px; font-weight:700; color:#9fb4ff;}
-  .round-label small{display:block; font-size:12px; font-weight:500; color:#6f78a0; margin-top:1px;}
-  /* 关卡标签 + 计时挪到棋盘上方，给棋盘腾出屏幕底部的空间 */
-  .stage-info{display:flex; align-items:center; justify-content:center; gap:22px; padding:0 4px;}
-  .time{font-variant-numeric:tabular-nums; font-size:34px; font-weight:800; color:#cfe0ff; letter-spacing:1px; line-height:1.1;}
-  .time.small{font-size:20px; color:#ffd166;}
+  /* ---- 棋盘上方信息区：六关进度 · 大计时 · 本关目标 / 剩余线条 ---- */
+  .prog{display:flex; gap:7px; width:100%; padding:0 2px;}
+  .seg{
+    flex:1 1 0; height:clamp(20px,3.6vh,36px); border-radius:10px; background:#232a49; border:1px solid #39426e;
+    display:flex; align-items:center; justify-content:center;
+    font-size:15px; font-weight:800; color:#626b93;
+  }
+  .seg.done{background:linear-gradient(180deg,#43c982,#268a56); border-color:#5ce08a; color:#eafff1;}
+  .seg.now{background:linear-gradient(180deg,#ffe07a,#e2ab2c); border-color:#fff0b8; color:#3a2a00; box-shadow:0 0 20px #ffd16666;}
+  .time{
+    font-variant-numeric:tabular-nums; font-size:clamp(40px,8vh,92px); font-weight:900;
+    color:#cfe0ff; letter-spacing:2px; line-height:1; text-shadow:0 4px 20px #0008;
+  }
+  .time.small{font-size:clamp(24px,3.6vh,40px); color:#ffe7a3; letter-spacing:1px;}
+  .stage-info{display:flex; align-items:center; justify-content:center; gap:20px; padding:0 4px;}
+  .round-label{font-size:19px; font-weight:700; color:#9fb4ff;}
+  .left-lines{font-size:21px; font-weight:800; color:#8fd8ad; font-variant-numeric:tabular-nums;}
+  .left-lines b{font-size:26px; color:#ffd166;}
+  .left-lines.zero{color:#5ce08a;}
+  .left-lines.zero b{color:#5ce08a;}
   .boardwrap{flex:1; display:flex; align-items:flex-end; justify-content:center; min-height:0; padding-bottom:0; position:relative;}
   canvas{display:block; border-radius:14px; background:#0f1428; touch-action:none; cursor:crosshair; position:relative; z-index:2;}
   .badge{
@@ -68,14 +77,14 @@
   .badge .b2{font-size:28px; font-weight:700; color:#cfe0ff; font-variant-numeric:tabular-nums;}
   .stage{
     position:absolute; left:0; right:0; top:0; display:flex; flex-direction:column;
-    align-items:center; justify-content:flex-end; gap:12px; pointer-events:none; z-index:0;
-    padding-bottom:10px; overflow:hidden;
+    align-items:center; justify-content:center; gap:clamp(10px,2vh,22px); pointer-events:none; z-index:0;
+    padding:0 2px 6px; overflow:hidden;
   }
-  .stage-colors{display:flex; align-items:center; justify-content:center; gap:16px;}
-  .chip{width:54px; height:54px; border-radius:50%; border:3px solid rgba(255,255,255,.35); box-shadow:0 6px 18px #0006;}
-  .stage-tip{font-size:15px; color:#7d86ac; letter-spacing:1px;}
-  .stage.done .stage-colors, .stage.done .stage-tip, .stage.done .stage-info{display:none;}
-  .stage.done{justify-content:flex-end; padding-bottom:12px;}
+  .stage-colors{display:flex; align-items:center; justify-content:center; gap:clamp(10px,1.6vh,18px);}
+  .chip{width:clamp(40px,7.4vh,72px); height:clamp(40px,7.4vh,72px); border-radius:50%; border:3px solid rgba(255,255,255,.35); box-shadow:0 6px 18px #0006;}
+  .stage-tip{font-size:13px; color:#6b749b; letter-spacing:1px;}
+  .stage.done .prog, .stage.done .stage-colors, .stage.done .stage-tip, .stage.done .stage-info{display:none;}
+  .stage.done{justify-content:flex-start; padding-top:clamp(6px,2vh,20px);}
   .ready-btn{
     pointer-events:auto; font-size:32px; font-weight:800; letter-spacing:3px;
     padding:18px 52px; border-radius:18px;
@@ -96,7 +105,7 @@
     text-shadow:0 6px 26px #0009;
   }
   .count.show{display:block;}
-  .stage.cd .stage-colors, .stage.cd .stage-tip, .stage.cd .stage-info, .stage.cd .ready-btn{display:none;}
+  .stage.cd .prog, .stage.cd .time, .stage.cd .stage-colors, .stage.cd .stage-tip, .stage.cd .stage-info, .stage.cd .ready-btn{display:none;}
   footer{flex:0 0 auto; display:flex; align-items:center; justify-content:space-between; gap:18px; padding:1px 4px 0; color:var(--dim); font-size:13px; line-height:1.35;}
   #board-list{flex:1; text-align:center; font-size:16px; color:#cfe0ff;}
   .hint{font-size:13px; color:#6f78a0;}
@@ -133,7 +142,7 @@
   .name-slot{
     font-family:inherit; background:transparent; border:1px dashed #4d5b8f; color:#9fb4ff;
     font-size:17px; font-weight:800; letter-spacing:1px; padding:3px 12px; border-radius:10px;
-    max-width:60%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+    max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
   }
   .name-slot.sel{ border:1px solid #5ce08a; background:#173627; color:#dcffe9; }
   .namepop{
@@ -162,16 +171,25 @@
   .badge .b3{ font-size:15px; font-weight:600; color:#9fb4ff; }
 
   .rank-list{ display:flex; flex-direction:column; gap:6px; overflow-y:auto; min-height:0; touch-action:pan-y; }
+  .rank-head{
+    display:grid; grid-template-columns:44px 1fr 80px 76px 100px 172px; align-items:center; gap:8px;
+    padding:2px 12px 4px; font-size:13px; color:#7d86ac; letter-spacing:1px;
+    border-bottom:1px solid #2a3358; margin-bottom:2px;
+  }
+  .rank-head div:nth-child(3){ padding-left:2px; }
+  .rank-head div:nth-child(4){ text-align:center; }
+  .rank-head div:nth-child(5), .rank-head div:nth-child(6){ text-align:right; }
   .rank-row{
-    display:grid; grid-template-columns:44px 1fr 92px 112px 62px; align-items:center; gap:8px;
+    display:grid; grid-template-columns:44px 1fr 80px 76px 100px 172px; align-items:center; gap:8px;
     padding:9px 12px; border-radius:12px; background:#1a2140; border:1px solid #2a3358; font-size:18px;
   }
   .rank-no{ font-size:19px; font-weight:800; color:#8b93b8; text-align:center; }
   .rank-no.top0{ color:#ffd166; } .rank-no.top1{ color:#d8e2ff; } .rank-no.top2{ color:#ffb26b; }
   .rank-name{ font-weight:800; color:#eaf1ff; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .rank-class{ font-size:15px; color:#8b93b8; }
+  .rank-clear{ font-size:15px; color:#8b93b8; text-align:center; }
   .rank-time{ font-variant-numeric:tabular-nums; font-weight:800; color:#9fd8ff; text-align:right; }
-  .rank-date{ font-size:13px; color:#6f78a0; text-align:right; }
+  .rank-date{ font-size:14px; color:#8b93b8; text-align:right; font-variant-numeric:tabular-nums; }
   .rank-empty{ padding:40px 10px; text-align:center; font-size:17px; color:#6f78a0; }
 
   #boardLayer, #nameLayer, #home{
@@ -222,6 +240,7 @@
     <button id="btnFull" class="ghost">全屏</button>
     <button id="btnDemo" class="ghost">演示</button>
     <button id="btnRestart" class="ghost game-only">重新开始</button>
+    <button id="btnNext" class="ghost game-only">换一组</button>
     <button id="btnNames" class="ghost game-only">名单</button>
     <button id="btnRank" class="ghost">排行榜</button>
     <div class="title"><h1>四人解阵 <small>6 关 · 5×5 → 6×6 → 7×7<span id="classTag"></span></small></h1></div>
@@ -256,6 +275,9 @@
       <button data-tab="all" class="on">全部班级</button>
       <button data-tab="cls" class="game-only">本班</button>
     </div>
+    <div class="rank-head">
+      <div>名次</div><div>姓名</div><div>班级</div><div>通关关数</div><div>通关时间</div><div>通关日期</div>
+    </div>
     <div class="rank-list" id="rankList"></div>
     <div class="board-foot">
       <span id="rankNote"></span>
@@ -281,10 +303,13 @@
 <div id="home">
   <div class="home-box">
     <h2>四人解阵 · 班级排行榜</h2>
-    <p class="home-sub">输入班级号进入本班游戏页。每人只保留自己的最快一次成绩，前 10 名实时更新。</p>
+    <p class="home-sub">输入班级进入本班游戏页。每人只保留自己的最快一次成绩，前 10 名实时更新。</p>
     <div class="home-enter">
-      <input id="classInput" placeholder="输入班级号，例如 701" maxlength="12">
+      <input id="classInput" placeholder="输入班级，例如三年级（1）" maxlength="12">
       <button id="btnEnter" class="primary">进入本班</button>
+    </div>
+    <div class="rank-head">
+      <div>名次</div><div>姓名</div><div>班级</div><div>通关关数</div><div>通关时间</div><div>通关日期</div>
     </div>
     <div class="rank-list" id="homeRank"></div>
   </div>
@@ -614,6 +639,7 @@ const listEl = document.getElementById('board-list');
 const btnFull = document.getElementById('btnFull');
 const btnDemo = document.getElementById('btnDemo');
 const btnRestart = document.getElementById('btnRestart');
+const btnNext = document.getElementById('btnNext');
 
 function makePlayer(i) {
   const panel = document.createElement('div');
@@ -621,16 +647,17 @@ function makePlayer(i) {
   panel.innerHTML = `
     <div class="phead">
       <button class="pname name-slot">＋ 选姓名</button>
-      <div class="pmeta"><div class="round-dots">${ROUNDS.map(() => '<div class="dot"></div>').join('')}</div></div>
     </div>
     <div class="boardwrap">
       <div class="stage">
-        <div class="stage-colors"></div>
-        <div class="stage-tip">把整块棋盘的格子全部走满</div>
+        <div class="prog">${ROUNDS.map((_, i) => `<div class="seg"><span>${i + 1}</span></div>`).join('')}</div>
+        <div class="time">00:00.0</div>
         <div class="stage-info">
-          <div class="round-label">第 1/6 关 · 2 对 · 5×5</div>
-          <div class="time">00:00.0</div>
+          <div class="round-label">第 1/${ROUNDS.length} 关 · 2 对 · 5×5</div>
+          <div class="left-lines">剩 <b>2</b> 条线</div>
         </div>
+        <div class="stage-colors"></div>
+        <div class="stage-tip">拖住同色端点，路线不能交叉，把整块棋盘走满</div>
         <div class="count"></div>
         <div class="badge"></div>
       </div>
@@ -653,9 +680,10 @@ function makePlayer(i) {
     readyBtn: panel.querySelector('.ready-btn'),
     cover: panel.querySelector('.cover'),
     countEl: panel.querySelector('.count'),
-    dots: [...panel.querySelectorAll('.dot')],
+    segs: [...panel.querySelectorAll('.seg')],
     timeEl: panel.querySelector('.time'),
     roundEl: panel.querySelector('.round-label'),
+    leftEl: panel.querySelector('.left-lines'),
     nameSlot: panel.querySelector('.name-slot'),
     namePop: panel.querySelector('.namepop'),
     playerName: '',
@@ -709,12 +737,20 @@ function loadRound(p, round) {
   p.drag = null;
   p.badge.classList.remove('show');
   p.stage.classList.remove('done');
-  p.roundEl.innerHTML = `第 ${round + 1}/${ROUNDS.length} 关 · ${pairs.length} 对 · ${cfg.n}×${cfg.n}`;
+  p.roundEl.textContent = `第 ${round + 1}/${ROUNDS.length} 关 · ${pairs.length} 对 · ${cfg.n}×${cfg.n}`;
   p.chips.innerHTML = pairs.map((_, ci) => `<div class="chip" style="background:${COLORS[ci]}"></div>`).join('');
-  p.dots.forEach((d, i) => {
-    d.className = 'dot' + (i < round ? ' done' : i === round ? ' now' : '');
+  p.segs.forEach((d, i) => {
+    d.className = 'seg' + (i < round ? ' done' : i === round ? ' now' : '');
   });
+  updateLines(p);
   draw(p);
+}
+
+// 剩余线条：还没连通的颜色对数，实时反馈"这一关还剩几条"
+function updateLines(p) {
+  const left = p.board.complete.filter(v => !v).length;
+  p.leftEl.innerHTML = `剩 <b>${left}</b> 条线`;
+  p.leftEl.classList.toggle('zero', left === 0);
 }
 
 // ---------- 准备 → 倒计时 → 开始 ----------
@@ -755,7 +791,7 @@ function armGame(newPuzzles) {
   if (app.cdTimer) { clearTimeout(app.cdTimer); app.cdTimer = 0; }
   app.players.forEach(resetPanel);
   applyPhaseVisual();
-  statusEl.textContent = '四人各按自己棋盘上的「开始」';
+  statusEl.textContent = '先选姓名，再按棋盘上的「开始」';
   updateBoardList();
 }
 
@@ -826,7 +862,7 @@ function tick(now) {
     if (p.finished) { doneCount++; continue; }
     p.timeEl.textContent = fmt(el);
   }
-  if (doneCount === app.players.length) statusEl.textContent = '全部完成，看排行榜';
+  if (doneCount === app.players.length) statusEl.textContent = '全部完成！点「换一组」换下一批';
   else if (doneCount > 0) statusEl.textContent = `已完成 ${doneCount} / 4`;
   else statusEl.textContent = '计时中…';
 }
@@ -967,6 +1003,7 @@ function draw(p) {
       }
     }
   }
+  updateLines(p);          // 拖拽/回退都走 draw，这里同步"剩几条线"
 }
 
 // ---------- 玩法演示（遮罩层动画） ----------
@@ -1236,6 +1273,36 @@ btnRestart.onclick = () => {
   }, 60);
 };
 
+// ---------- 换一组：清空四个姓名 + 换新题（比赛进行中同样要二次确认） ----------
+let nextAt = 0, nextTimer = 0;
+btnNext.onclick = () => {
+  const running = app.phase === 'play' || app.phase === 'countdown';
+  if (running && performance.now() - nextAt > 2600) {
+    nextAt = performance.now();
+    btnNext.textContent = '再点一次确认';
+    btnNext.classList.add('warn');
+    clearTimeout(nextTimer);
+    nextTimer = setTimeout(() => {
+      nextAt = 0;
+      btnNext.textContent = '换一组';
+      btnNext.classList.remove('warn');
+    }, 2600);
+    return;
+  }
+  clearTimeout(nextTimer);
+  nextAt = 0;
+  btnNext.classList.remove('warn');
+  btnNext.disabled = true;
+  btnNext.textContent = '出题中…';
+  setTimeout(() => {
+    clearNames();
+    armGame(true);
+    statusEl.textContent = '新一组：四人重新选姓名';
+    btnNext.textContent = '换一组';
+    btnNext.disabled = false;
+  }, 60);
+};
+
 // ======================= 班级 / 姓名 / 上传 / 榜单 =======================
 const CLASS_CODE = (new URLSearchParams(location.search).get('c') || '').trim();
 const SB_URL = 'https://ixnuxflxdthnismazwvd.supabase.co/rest/v1';
@@ -1264,9 +1331,12 @@ function uuid() {
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g,
   m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
 const maskName = n => { const s = String(n || ''); return s.length <= 1 ? (s || '—') : s[0] + '＊'; };
-function dateShort(s) {
+function dateFull(s) {
   const d = new Date(s);
-  return isNaN(d) ? '' : (d.getMonth() + 1) + '-' + String(d.getDate()).padStart(2, '0');
+  if (isNaN(d)) return '';
+  const pad = n => String(n).padStart(2, '0');
+  return d.getFullYear() + '年' + (d.getMonth() + 1) + '月' + d.getDate() + '日 ' +
+    pad(d.getHours()) + ':' + pad(d.getMinutes());
 }
 
 // ---------- 名单（只存本机 localStorage，不上传） ----------
@@ -1320,6 +1390,16 @@ function setPlayerName(p, name) {
   statusEl.textContent = `已选姓名 ${n}/${app.players.length}`;
 }
 
+// 换下一批学生：四个姓名全部清掉，回到各自准备
+function clearNames() {
+  app.players.forEach(p => {
+    p.playerName = '';
+    p.nameSlot.textContent = '＋ 选姓名';
+    p.nameSlot.classList.remove('sel');
+    closeNamePop(p);
+  });
+}
+
 // ---------- 成绩上传 ----------
 async function uploadScore(p) {
   const el = p.badge.querySelector('.b3');
@@ -1339,6 +1419,7 @@ async function uploadScore(p) {
         player_name: p.playerName || '匿名',
         total_ms: Math.round(p.finishTime),
         rounds: p.laps,
+        rounds_total: ROUNDS.length,   // 记录当时的关数，以后加关卡不影响旧成绩
       }),
     });
     if (!r.ok) {
@@ -1357,8 +1438,11 @@ async function uploadScore(p) {
 }
 
 // ---------- 榜单 ----------
+// 只统计“当前关数”这一版的成绩：以后加关卡，旧成绩不会和新成绩混排
 async function fetchRank(cls) {
-  let url = SB_URL + '/leaderboard?select=class_code,player_name,total_ms,created_at&order=total_ms.asc&limit=60';
+  let url = SB_URL + '/leaderboard?select=class_code,player_name,total_ms,created_at,rounds_total'
+    + '&rounds_total=eq.' + ROUNDS.length
+    + '&order=total_ms.asc&limit=60';
   if (cls) url += '&class_code=eq.' + encodeURIComponent(cls);
   const r = await fetch(url, { headers: { apikey: SB_KEY } });
   if (!r.ok) throw new Error('HTTP ' + r.status);
@@ -1373,8 +1457,9 @@ function renderRank(el, rows, mask) {
       <div class="rank-no top${i}">${i + 1}</div>
       <div class="rank-name">${esc(mask ? maskName(r.player_name) : r.player_name)}</div>
       <div class="rank-class">${esc(r.class_code)} 班</div>
+      <div class="rank-clear">${r.rounds_total || ROUNDS.length} 关</div>
       <div class="rank-time">${fmt(r.total_ms)}</div>
-      <div class="rank-date">${dateShort(r.created_at)}</div>
+      <div class="rank-date">${dateFull(r.created_at)}</div>
     </div>`).join('');
 }
 
