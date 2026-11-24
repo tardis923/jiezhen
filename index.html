@@ -1411,6 +1411,7 @@ async function uploadScore(p) {
     total_ms: Math.round(p.finishTime),
     rounds: p.laps,
     rounds_total: ROUNDS.length,   // 记录当时的关数，以后加关卡不影响旧成绩
+    game: 'jiezhen',               // 和《数字闪电》共用一张表，靠这个字段分开榜
   };
   const post = body => fetch(SB_URL + '/scores', {
     method: 'POST',
@@ -1426,9 +1427,9 @@ async function uploadScore(p) {
     let r = await post(payload);
     if (!r.ok) {
       const t = await r.text();
-      // 数据库还没加 rounds_total 字段（错误码 42703）：去掉它再投一次，成绩不会丢
-      if (/42703|does not exist/.test(t)) {
-        const { rounds_total, ...legacy } = payload;
+      // 数据库还没加 rounds_total / game 字段（错误码 42703）：去掉新字段再投一次，成绩不会丢
+      if (/42703|PGRST204|does not exist|Could not find/.test(t)) {
+        const { rounds_total, game, ...legacy } = payload;
         r = await post(legacy);
         if (!r.ok) throw new Error('HTTP ' + r.status + ' ' + (await r.text()).slice(0, 120));
         if (el) { el.textContent = '成绩已上榜 ✓'; el.style.color = '#7be495'; }
@@ -1452,18 +1453,21 @@ async function uploadScore(p) {
 async function fetchRank(cls) {
   const base = SB_URL + '/leaderboard?select=class_code,player_name,total_ms,created_at';
   const clsPart = cls ? '&class_code=eq.' + encodeURIComponent(cls) : '';
-  // 先按“当前关数”取（需要库里已有 rounds_total 字段）
-  let url = base + ',rounds_total&rounds_total=eq.' + ROUNDS.length + '&order=total_ms.asc&limit=60' + clsPart;
-  let r = await fetch(url, { headers: { apikey: SB_KEY } });
-  if (r.ok) return r.json();
-  const body = await r.text().catch(() => '');
-  // 库还是旧结构（列不存在）：退回旧查询，榜单照常显示，别让页面白屏
-  if (!/42703|does not exist/.test(body)) throw new Error('HTTP ' + r.status);
-  console.warn('[rank] 数据库缺 rounds_total 列，已用旧结构读取');
-  url = base + '&order=total_ms.asc&limit=60' + clsPart;
-  r = await fetch(url, { headers: { apikey: SB_KEY } });
-  if (!r.ok) throw new Error('HTTP ' + r.status);
-  return r.json();
+  // 依次降级：新版（按游戏+关数过滤）→ 只有关数（老视图）→ 老结构（视图无 rounds_total）
+  const tries = [
+    base + ',rounds_total&game=eq.jiezhen&rounds_total=eq.' + ROUNDS.length + '&order=total_ms.asc&limit=60' + clsPart,
+    base + ',rounds_total&rounds_total=eq.' + ROUNDS.length + '&order=total_ms.asc&limit=60' + clsPart,
+    base + '&order=total_ms.asc&limit=60' + clsPart,
+  ];
+  for (let i = 0; i < tries.length; i++) {
+    const r = await fetch(tries[i], { headers: { apikey: SB_KEY } });
+    if (r.ok) return r.json();
+    const body = await r.text().catch(() => '');
+    // 只有“列不存在”才降级，其它错误照常抛给上层提示
+    if (!/42703|PGRST204|does not exist|Could not find/.test(body)) throw new Error('HTTP ' + r.status);
+    console.warn('[rank] 数据库缺列，降级读取（第 ' + (i + 1) + ' 次）');
+  }
+  throw new Error('HTTP 400 榜单列缺失');
 }
 
 function renderRank(el, rows, mask) {
