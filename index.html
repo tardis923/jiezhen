@@ -44,7 +44,7 @@
   .pname{font-size:20px; font-weight:800; letter-spacing:1px;}
   .pfoot{flex:0 0 auto; display:flex; align-items:flex-end; justify-content:space-between; gap:8px; padding:6px 4px 2px;}
   /* ---- 棋盘上方信息区：六关进度 · 大计时 · 本关目标 / 剩余线条 ---- */
-  .prog{display:flex; gap:7px; width:100%; padding:0 2px;}
+  .prog{display:none;}
   .seg{
     flex:1 1 0; height:clamp(20px,3.6vh,36px); border-radius:10px; background:#232a49; border:1px solid #39426e;
     display:flex; align-items:center; justify-content:center;
@@ -57,10 +57,10 @@
     color:#cfe0ff; letter-spacing:2px; line-height:1; text-shadow:0 4px 20px #0008;
   }
   .time.small{font-size:clamp(24px,3.6vh,40px); color:#ffe7a3; letter-spacing:1px;}
-  .stage-info{display:flex; align-items:center; justify-content:center; gap:20px; padding:0 4px;}
-  .round-label{font-size:19px; font-weight:700; color:#9fb4ff;}
-  .left-lines{font-size:21px; font-weight:800; color:#8fd8ad; font-variant-numeric:tabular-nums;}
-  .left-lines b{font-size:26px; color:#ffd166;}
+  .stage-info{display:flex; flex-direction:column; align-items:flex-start; justify-content:center; gap:3px; padding:0 2px;}
+  .round-label{font-size:17px; font-weight:700; color:#9fb4ff;}
+  .left-lines{font-size:17px; font-weight:800; color:#8fd8ad; font-variant-numeric:tabular-nums;}
+  .left-lines b{font-size:1.2em; color:#ffd166;}
   .left-lines.zero{color:#5ce08a;}
   .left-lines.zero b{color:#5ce08a;}
   .boardwrap{flex:1; display:flex; align-items:flex-end; justify-content:center; min-height:0; padding-bottom:0; position:relative;}
@@ -77,13 +77,26 @@
   .badge .b2{font-size:28px; font-weight:700; color:#cfe0ff; font-variant-numeric:tabular-nums;}
   .stage{
     position:absolute; left:0; right:0; top:0; display:flex; flex-direction:column;
-    align-items:center; justify-content:center; gap:clamp(10px,2vh,22px); pointer-events:none; z-index:0;
+    align-items:center; justify-content:center; gap:clamp(5px,1.1vh,11px); pointer-events:none; z-index:0;
     padding:0 2px 6px; overflow:hidden;
   }
-  .stage-colors{display:flex; align-items:center; justify-content:center; gap:clamp(10px,1.6vh,18px);}
-  .chip{width:clamp(40px,7.4vh,72px); height:clamp(40px,7.4vh,72px); border-radius:50%; border:3px solid rgba(255,255,255,.35); box-shadow:0 6px 18px #0006;}
+  .stage-colors{display:none;}
+  .hud-row{display:flex; align-items:center; justify-content:center; gap:clamp(6px,1.1vh,14px); width:100%;}
+  .mirrorbox{display:flex; align-items:center; justify-content:center; margin:0 auto;}
+  canvas.mirror{display:block; border-radius:12px; border:1px solid #2f3a63; background:#0f1428; box-shadow:0 6px 18px #0007; cursor:default;}
+  .namerow{
+    position:absolute; left:50%; bottom:4px; transform:translateX(-50%);
+    pointer-events:auto; z-index:3;
+  }
+  .namerow .name-slot{
+    font-size:clamp(17px,2.1vh,22px); padding:9px 22px; border-radius:14px;
+    border:1px dashed #ffd166; color:#ffd166; background:#1a2140d9;
+  }
+  .stage.cd .namerow, .stage.done .namerow{ display:none; }
+  .chip{width:clamp(40px,6.2vh,60px); height:clamp(40px,6.2vh,60px); border-radius:50%; border:3px solid rgba(255,255,255,.35); box-shadow:0 6px 18px #0006;}
   .stage-tip{font-size:13px; color:#6b749b; letter-spacing:1px;}
-  .stage.done .prog, .stage.done .stage-colors, .stage.done .stage-tip, .stage.done .stage-info{display:none;}
+  .stage.tight .stage-tip, .stage.tight .stage-colors{display:none;}
+  .stage.done .prog, .stage.done .stage-colors, .stage.done .stage-tip, .stage.done .stage-info, .stage.done .mirrorbox{display:none;}
   .stage.done{justify-content:flex-start; padding-top:clamp(6px,2vh,20px);}
   .ready-btn{
     pointer-events:auto; font-size:32px; font-weight:800; letter-spacing:3px;
@@ -105,8 +118,10 @@
     text-shadow:0 6px 26px #0009;
   }
   .count.show{display:block;}
-  .stage.cd .prog, .stage.cd .time, .stage.cd .stage-colors, .stage.cd .stage-tip, .stage.cd .stage-info, .stage.cd .ready-btn{display:none;}
+  .stage.cd .stage-top, .stage.cd .stage-colors, .stage.cd .stage-tip, .stage.cd .stage-info, .stage.cd .ready-btn{display:none;}
   footer{flex:0 0 auto; display:flex; align-items:center; justify-content:space-between; gap:18px; padding:1px 4px 0; color:var(--dim); font-size:13px; line-height:1.35;}
+  #btnRestart{display:none;}
+  footer{display:none;}
   #board-list{flex:1; text-align:center; font-size:16px; color:#cfe0ff;}
   .hint{font-size:13px; color:#6f78a0;}
   .flash{animation:flash .5s ease;}
@@ -146,31 +161,51 @@
   }
   .name-slot.sel{ border:1px solid #5ce08a; background:#173627; color:#dcffe9; }
   .namepop{
-    position:absolute; left:6px; right:6px; top:2px; bottom:2px; z-index:7; display:none;
+    position:absolute; left:6px; right:6px; top:auto; bottom:4px; height:62%; z-index:7; display:none;
     flex-direction:column; padding:8px 8px 6px; border-radius:14px;
     background:linear-gradient(180deg,#1f2747,#161b2f); border:1px solid #3f4d80;
     box-shadow:0 14px 40px #000b;
   }
   .namepop.show{ display:flex; }
   .namepop-head{ display:flex; align-items:center; justify-content:space-between; padding:0 2px 6px; }
-  .namepop-head span{ font-size:14px; color:#9fb4ff; font-weight:700; }
-  .namepop-head button{ font-size:13px; padding:3px 10px; border-radius:8px; }
+  .namepop-head span{ font-size:var(--np-head,17px); color:#b9c6f5; font-weight:800; letter-spacing:1px; }
+  .namepop-head button{ font-size:var(--np-btn,15px); padding:4px 10px; border-radius:8px; }
   .namepop-list{
-    flex:1; min-height:0; overflow-y:auto; display:grid; gap:6px; align-content:start;
-    grid-template-columns:repeat(3,1fr); touch-action:pan-y;
+    flex:1; min-height:0; overflow-y:auto; display:grid; gap:var(--np-gap,6px); align-content:start;
+    grid-template-columns:repeat(auto-fill,minmax(var(--np-col,96px),1fr));
+    grid-auto-rows:var(--np-row,42px); touch-action:pan-y;
   }
-  .namepop-list button{ font-size:15px; padding:8px 2px; border-radius:9px; background:#242d4f; border:1px solid #38426e; }
+  .namepop-list button{
+    font-size:var(--np-font,18px); font-weight:700; color:#eef3ff; letter-spacing:1px;
+    padding:0 4px; border-radius:9px; background:#2b3560; border:1px solid #46528a;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .namepop-list button:active{ background:#3d4a7d; }
+  .namepop-list button.sel{ background:#173627; border-color:#5ce08a; color:#dcffe9; }
   .namepop-list button.taken{ opacity:.3; }
-  .namepop-empty{ font-size:14px; color:#7d86ac; padding:10px 4px; line-height:1.7; grid-column:1/-1; }
-  .namepop-own{ grid-column:1/-1; display:flex; gap:6px; margin-top:4px; }
+  .namepop-empty{ font-size:var(--np-btn,15px); color:#8790b8; padding:10px 4px; line-height:1.7; grid-column:1/-1; }
+  .namepop-pager{ flex:0 0 auto; display:flex; align-items:center; justify-content:center; gap:6px; padding-top:6px; }
+  .namepop-pager button{
+    font-size:var(--np-btn,16px); font-weight:700; padding:4px 10px; border-radius:9px;
+    background:#242d4f; border:1px solid #46528a; color:#dbe4ff;
+  }
+  .namepop-pager button:disabled{ opacity:.32; }
+  .namepop-pager span{ font-size:var(--np-btn,15px); color:#9fb4ff; font-weight:700; min-width:58px; text-align:center; }
+  .namepop-own{ flex:0 0 auto; display:flex; gap:6px; margin-top:5px; }
   .namepop-own input{
-    flex:1; min-width:0; font-family:inherit; font-size:15px; padding:7px 10px; border-radius:9px;
+    flex:1; min-width:0; font-family:inherit; font-size:var(--np-btn,15px); padding:5px 8px; border-radius:9px;
     background:#10152a; border:1px solid #3f4d80; color:#e8ecff;
   }
-  .namepop-own button{ font-size:15px; padding:7px 12px; border-radius:9px; }
+  .namepop-own button{ font-size:var(--np-btn,15px); padding:5px 10px; border-radius:9px; }
   .badge .b3{ font-size:15px; font-weight:600; color:#9fb4ff; }
 
-  .rank-list{ display:flex; flex-direction:column; gap:6px; overflow-y:auto; min-height:0; touch-action:pan-y; }
+  .rank-list{ display:flex; flex-direction:column; gap:6px; overflow-y:auto; min-height:0; flex:1 1 auto; touch-action:pan-y; }
+  .rank-pager{ display:flex; align-items:center; justify-content:center; gap:8px; flex-wrap:wrap; padding:2px 0; }
+  .rank-pager button{ min-width:44px; height:38px; padding:0 12px; font-size:15px; border-radius:10px; }
+  .rank-pager button.on{ background:linear-gradient(180deg,#3f7fe0,#2a5cb8); border-color:#6ea8ff; color:#fff; font-weight:800; }
+  .rank-pager button[disabled]{ opacity:.35; }
+  .rank-pager .dots{ color:#6f78a0; font-size:15px; padding:0 2px; }
+  .rank-pager .pinfo{ font-size:14px; color:#8b93b8; margin-right:4px; }
   .rank-head{
     display:grid; grid-template-columns:44px 1fr 80px 76px 100px 172px; align-items:center; gap:8px;
     padding:2px 12px 4px; font-size:13px; color:#7d86ac; letter-spacing:1px;
@@ -270,7 +305,7 @@
 
 <div id="boardLayer">
   <div class="board-box">
-    <h3>排行榜 · 前 10 名</h3>
+    <h3>排行榜 · 全部名次</h3>
     <div class="rank-tabs" id="rankTabs">
       <button data-tab="all" class="on">全部班级</button>
       <button data-tab="cls" class="game-only">本班</button>
@@ -279,6 +314,7 @@
       <div>名次</div><div>姓名</div><div>班级</div><div>通关关数</div><div>通关时间</div><div>通关日期</div>
     </div>
     <div class="rank-list" id="rankList"></div>
+    <div class="rank-pager" id="rankPager"></div>
     <div class="board-foot">
       <span id="rankNote"></span>
       <button id="rankRefresh" class="ghost">刷新</button>
@@ -303,7 +339,7 @@
 <div id="home">
   <div class="home-box">
     <h2>四人解阵 · 班级排行榜</h2>
-    <p class="home-sub">输入班级进入本班游戏页。每人只保留自己的最快一次成绩，前 10 名实时更新。</p>
+    <p class="home-sub">输入班级进入本班游戏页。每人只保留自己的最快一次成绩，全部名次实时更新。</p>
     <div class="home-enter">
       <input id="classInput" placeholder="输入班级，例如三年级（1）" maxlength="12">
       <button id="btnEnter" class="primary">进入本班</button>
@@ -312,6 +348,7 @@
       <div>名次</div><div>姓名</div><div>班级</div><div>通关关数</div><div>通关时间</div><div>通关日期</div>
     </div>
     <div class="rank-list" id="homeRank"></div>
+    <div class="rank-pager" id="homePager"></div>
   </div>
 </div>
 
@@ -645,35 +682,45 @@ function makePlayer(i) {
   const panel = document.createElement('div');
   panel.className = 'panel';
   panel.innerHTML = `
-    <div class="phead">
-      <button class="pname name-slot">＋ 选姓名</button>
-    </div>
     <div class="boardwrap">
       <div class="stage">
-        <div class="prog">${ROUNDS.map((_, i) => `<div class="seg"><span>${i + 1}</span></div>`).join('')}</div>
-        <div class="time">00:00.0</div>
-        <div class="stage-info">
-          <div class="round-label">第 1/${ROUNDS.length} 关 · 2 对 · 5×5</div>
-          <div class="left-lines">剩 <b>2</b> 条线</div>
+        <div class="mirrorbox"><canvas class="mirror"></canvas></div>
+        <div class="hud-row">
+          <div class="time">00:00.0</div>
+          <div class="stage-info">
+            <div class="round-label">第 1/${ROUNDS.length} 关</div>
+            <div class="left-lines">剩 <b>21</b> 格</div>
+          </div>
         </div>
+        <div class="prog">${ROUNDS.map((_, i) => `<div class="seg"><span>${i + 1}</span></div>`).join('')}</div>
         <div class="stage-colors"></div>
-        <div class="stage-tip">拖住同色端点，路线不能交叉，把整块棋盘走满</div>
+
         <div class="count"></div>
         <div class="badge"></div>
+        <div class="namerow"><button class="pname name-slot">＋ 选姓名</button></div>
       </div>
-      <canvas></canvas>
+      <canvas class="board"></canvas>
       <div class="cover"><button class="ready-btn">开始</button></div>
       <div class="namepop">
         <div class="namepop-head"><span>点自己的名字</span><button class="ghost namepop-x">关闭</button></div>
         <div class="namepop-list"></div>
+        <div class="namepop-pager">
+          <button class="pg-prev">上一页</button>
+          <span class="pg-info">第 1 / 1 页</span>
+          <button class="pg-next">下一页</button>
+        </div>
+        <div class="namepop-own"><input placeholder="没有我的名字？在这里打" maxlength="12"><button>确定</button></div>
       </div>
     </div>`;
   boardsEl.appendChild(panel);
 
   const p = {
     i, panel,
-    canvas: panel.querySelector('canvas'),
-    ctx: panel.querySelector('canvas').getContext('2d'),
+    canvas: panel.querySelector('canvas.board'),
+    mirror: panel.querySelector('canvas.mirror'),
+    mirrorSize: 0,
+    ctx: panel.querySelector('canvas.board').getContext('2d'),
+    mctx: panel.querySelector('canvas.mirror').getContext('2d'),
     badge: panel.querySelector('.badge'),
     stage: panel.querySelector('.stage'),
     chips: panel.querySelector('.stage-colors'),
@@ -686,6 +733,7 @@ function makePlayer(i) {
     leftEl: panel.querySelector('.left-lines'),
     nameSlot: panel.querySelector('.name-slot'),
     namePop: panel.querySelector('.namepop'),
+    namePage: 0,
     playerName: '',
     size: 300, cell: 60, dpr: 1,
     round: 0,
@@ -700,6 +748,13 @@ function makePlayer(i) {
     openNamePop(p);
   });
   p.namePop.querySelector('.namepop-x').addEventListener('click', () => closeNamePop(p));
+  const ownInp = p.namePop.querySelector('.namepop-own input');
+  const ownOk = p.namePop.querySelector('.namepop-own button');
+  const commitOwn = () => { const v = ownInp.value.trim(); if (v) setPlayerName(p, v); };
+  ownOk.addEventListener('click', commitOwn);
+  ownInp.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); commitOwn(); } });
+  p.namePop.querySelector('.pg-prev').addEventListener('click', () => turnNamePage(p, -1));
+  p.namePop.querySelector('.pg-next').addEventListener('click', () => turnNamePage(p, 1));
 
   p.readyBtn.addEventListener('click', () => setReady(p));
   bindPointer(p);
@@ -725,6 +780,49 @@ function fitCanvas(p) {
   p.cover.style.height = s + 'px';
   // 棋盘上方剩下的空档正好给颜色提示用
   p.stage.style.height = Math.max(0, wrap.clientHeight - s) + 'px';
+
+  // 姓名弹窗左右与棋盘对齐（高度/位置由 layoutNamePop 按名单算）
+  const side = Math.max(4, Math.round((wrap.clientWidth - s) / 2));
+  p.namePop.style.left = side + 'px';
+  p.namePop.style.right = side + 'px';
+
+  // 上方镜像棋盘：正上方居中，尽量放大，再按实际高度收一收，底部给“选姓名”留位
+  const stageH = Math.max(0, wrap.clientHeight - s);
+  let m = Math.max(96, Math.min(Math.round(s * 0.75), Math.round(stageH * 0.62)));
+  const setMirror = size => {
+    m = size;
+    p.mirrorSize = m;
+    p.mirror.style.width = m + 'px';
+    p.mirror.style.height = m + 'px';
+    p.mirror.width = Math.round(m * p.dpr);
+    p.mirror.height = Math.round(m * p.dpr);
+    p.mctx.setTransform(p.dpr, 0, 0, p.dpr, 0, 0);
+  };
+  setMirror(m);
+  // 计时竖排后按面板宽定字号
+  // 计时与“第 X 关 / 剩 N 格”同一行：字号按剩余宽度算，保证不换行
+  const infoFont = Math.round(Math.min(17, Math.max(12, s / 26)));
+  p.roundEl.style.fontSize = infoFont + 'px';
+  p.leftEl.style.fontSize = infoFont + 'px';
+  const infoW = infoFont * 10 + 10;
+  p.timeEl.style.fontSize = Math.round(Math.min(80, Math.max(22, (s - infoW - 36) / 3.85))) + 'px';
+  // 量内容实际底部（跳过绝对定位的姓名按钮/角标）
+  p.stage.classList.toggle('tight', stageH < 430);
+  const contentBottom = () => {
+    const top = p.stage.getBoundingClientRect().top;
+    let b = 0;
+    for (const el of p.stage.children) {
+      if (getComputedStyle(el).position === 'absolute') continue;
+      const r = el.getBoundingClientRect();
+      if (r.height > 0) b = Math.max(b, r.bottom - top);
+    }
+    return b;
+  };
+  let guard = 0;
+  while (stageH > 0 && contentBottom() > stageH - 56 && m > 84 && guard++ < 14) {
+    setMirror(Math.round(m * 0.94));
+  }
+
   draw(p);
 }
 
@@ -737,7 +835,7 @@ function loadRound(p, round) {
   p.drag = null;
   p.badge.classList.remove('show');
   p.stage.classList.remove('done');
-  p.roundEl.textContent = `第 ${round + 1}/${ROUNDS.length} 关 · ${pairs.length} 对 · ${cfg.n}×${cfg.n}`;
+  p.roundEl.textContent = `第 ${round + 1}/${ROUNDS.length} 关`;
   p.chips.innerHTML = pairs.map((_, ci) => `<div class="chip" style="background:${COLORS[ci]}"></div>`).join('');
   p.segs.forEach((d, i) => {
     d.className = 'seg' + (i < round ? ' done' : i === round ? ' now' : '');
@@ -746,10 +844,10 @@ function loadRound(p, round) {
   draw(p);
 }
 
-// 剩余线条：还没连通的颜色对数，实时反馈"这一关还剩几条"
+// 剩余格子：还有几格没走（画线会把格子占掉，走满即通关）
 function updateLines(p) {
-  const left = p.board.complete.filter(v => !v).length;
-  p.leftEl.innerHTML = `剩 <b>${left}</b> 条线`;
+  const left = p.board.occ.filter(v => v === -1).length;
+  p.leftEl.innerHTML = `剩 <b>${left}</b> 格`;
   p.leftEl.classList.toggle('zero', left === 0);
 }
 
@@ -954,9 +1052,9 @@ function updateBoardList() {
 }
 
 // ---------- 绘制 ----------
-function draw(p) {
-  const ctx = p.ctx, s = p.size, cell = p.cell;
-  const n = p.board.n;
+// 把整块棋面画到任意 ctx / 任意尺寸（主棋盘和上方镜像共用这一份逻辑）
+function paintBoard(ctx, s, b) {
+  const n = b.n, cell = s / n;
   ctx.clearRect(0, 0, s, s);
   ctx.fillStyle = '#0f1428';
   ctx.fillRect(0, 0, s, s);
@@ -970,7 +1068,6 @@ function draw(p) {
   }
 
   // 线
-  const b = p.board;
   for (let ci = 0; ci < b.paths.length; ci++) {
     const path = b.paths[ci];
     if (path.length < 2) continue;
@@ -1003,7 +1100,12 @@ function draw(p) {
       }
     }
   }
-  updateLines(p);          // 拖拽/回退都走 draw，这里同步"剩几条线"
+}
+
+function draw(p) {
+  paintBoard(p.ctx, p.size, p.board);
+  if (p.mirrorSize) paintBoard(p.mctx, p.mirrorSize, p.board);   // 上方镜像同步
+  updateLines(p);          // 拖拽/回退都走 draw，这里同步"剩几格"
 }
 
 // ---------- 玩法演示（遮罩层动画） ----------
@@ -1341,6 +1443,7 @@ function dateFull(s) {
 
 // ---------- 名单（只存本机 localStorage，不上传） ----------
 const NAMES_KEY = 'jz_names_' + (CLASS_CODE || 'home');
+const NAME_PAGE = 20;   // 姓名弹窗每页 20 个
 function getNames() {
   try { const a = JSON.parse(localStorage.getItem(NAMES_KEY) || '[]'); return Array.isArray(a) ? a : []; }
   catch (e) { return []; }
@@ -1349,8 +1452,43 @@ function setNames(a) { try { localStorage.setItem(NAMES_KEY, JSON.stringify(a));
 
 function openNamePop(p) {
   if (app.phase !== 'ready') return;
-  renderNamePop(p);
   p.namePop.classList.add('show');
+  layoutNamePop(p);
+  const names = getNames();
+  const idx = p.playerName ? names.indexOf(p.playerName) : -1;
+  p.namePage = idx >= 0 ? Math.floor(idx / p.pageSize) : 0;   // 打开时定位到自己所在的那页
+  renderNamePop(p);
+}
+
+// 姓名弹窗按屏幕尺寸分档：1080P 一页放满，低分辨率也不滚动
+const NAME_FIXED = 140;   // 标题 + 分页条 + 输入行 + 内边距的固定高度
+function nameMetrics(s) {
+  if (s < 260) return { font: 13, row: 28, col: 48, gap: 4, head: 13, btn: 12 };
+  if (s < 380) return { font: 15, row: 34, col: 72, gap: 5, head: 15, btn: 13 };
+  return { font: 18, row: 42, col: 96, gap: 6, head: 17, btn: 15 };
+}
+
+function layoutNamePop(p) {
+  const wrap = p.panel.querySelector('.boardwrap');
+  if (!wrap) return;
+  const s = p.canvas.clientWidth || 300;
+  const h = wrap.clientHeight;
+  const pop = p.namePop;
+  const m = nameMetrics(s);
+  pop.style.setProperty('--np-font', m.font + 'px');
+  pop.style.setProperty('--np-row', m.row + 'px');
+  pop.style.setProperty('--np-col', m.col + 'px');
+  pop.style.setProperty('--np-gap', m.gap + 'px');
+  pop.style.setProperty('--np-head', m.head + 'px');
+  pop.style.setProperty('--np-btn', m.btn + 'px');
+  const inner = s - 16;                                          // 弹窗内可用宽（左右各 6 + 内边距 8）
+  const cols = Math.max(1, Math.floor((inner + m.gap) / (m.col + m.gap)));
+  const maxH = Math.min(Math.max(Math.round(s * 1.1), 300), Math.round(h * 0.9));
+  const rows = Math.max(3, Math.floor((maxH - NAME_FIXED + m.gap) / (m.row + m.gap)));
+  p.pageSize = Math.max(4, cols * rows);
+  const popH = Math.min(NAME_FIXED + rows * m.row + (rows - 1) * m.gap, maxH);
+  pop.style.height = popH + 'px';
+  pop.style.top = Math.max(0, h - popH) + 'px';
 }
 function closeNamePop(p) { p.namePop.classList.remove('show'); }
 
@@ -1358,27 +1496,41 @@ function renderNamePop(p) {
   const list = p.namePop.querySelector('.namepop-list');
   const names = getNames();
   const taken = new Set(app.players.filter(q => q !== p && q.playerName).map(q => q.playerName));
-  let html = '';
+  const size = p.pageSize || NAME_PAGE;
+  const pages = Math.max(1, Math.ceil(names.length / size));
+  if (!(p.namePage >= 0) || p.namePage > pages - 1) p.namePage = 0;
   if (!names.length) {
-    html += `<div class="namepop-empty">还没有名单。<br>请老师点左上角「名单」导入全班名字，或直接在下面输入。</div>`;
+    list.innerHTML = `<div class="namepop-empty">还没有名单。<br>请老师点左上角「名单」导入全班名字，或直接在下面输入。</div>`;
   } else {
-    html += names.map(nm => {
+    const start = p.namePage * size;
+    list.innerHTML = names.slice(start, start + size).map(nm => {
       const busy = taken.has(nm) && nm !== p.playerName;
-      return `<button data-nm="${esc(nm)}" class="${busy ? 'taken' : ''}">${esc(nm)}</button>`;
+      const sel = nm === p.playerName;
+      return `<button data-nm="${esc(nm)}" class="${busy ? 'taken' : ''}${sel ? ' sel' : ''}">${esc(nm)}</button>`;
     }).join('');
+    list.querySelectorAll('button[data-nm]').forEach(b => {
+      if (b.classList.contains('taken')) return;
+      b.onclick = () => setPlayerName(p, b.dataset.nm);
+    });
   }
-  html += `<div class="namepop-own"><input placeholder="没有我的名字？在这里打" maxlength="12"><button>确定</button></div>`;
-  list.innerHTML = html;
+  paintNamePager(p, pages);
+  list.scrollTop = 0;
+}
 
-  list.querySelectorAll('button[data-nm]').forEach(b => {
-    if (b.classList.contains('taken')) return;
-    b.onclick = () => setPlayerName(p, b.dataset.nm);
-  });
-  const inp = list.querySelector('input');
-  const ok = list.querySelector('.namepop-own button');
-  const commit = () => { const v = inp.value.trim(); if (v) setPlayerName(p, v); };
-  ok.onclick = commit;
-  inp.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); commit(); } };
+function paintNamePager(p, pages) {
+  const prev = p.namePop.querySelector('.pg-prev');
+  const next = p.namePop.querySelector('.pg-next');
+  p.namePop.querySelector('.pg-info').textContent = '第 ' + (p.namePage + 1) + ' / ' + pages + ' 页';
+  prev.disabled = p.namePage <= 0;
+  next.disabled = p.namePage >= pages - 1;
+}
+
+function turnNamePage(p, d) {
+  const pages = Math.max(1, Math.ceil(getNames().length / (p.pageSize || NAME_PAGE)));
+  const np = Math.min(Math.max(p.namePage + d, 0), pages - 1);
+  if (np === p.namePage) return;
+  p.namePage = np;
+  renderNamePop(p);
 }
 
 function setPlayerName(p, name) {
@@ -1455,9 +1607,9 @@ async function fetchRank(cls) {
   const clsPart = cls ? '&class_code=eq.' + encodeURIComponent(cls) : '';
   // 依次降级：新版（按游戏+关数过滤）→ 只有关数（老视图）→ 老结构（视图无 rounds_total）
   const tries = [
-    base + ',rounds_total&game=eq.jiezhen&rounds_total=eq.' + ROUNDS.length + '&order=total_ms.asc&limit=60' + clsPart,
-    base + ',rounds_total&rounds_total=eq.' + ROUNDS.length + '&order=total_ms.asc&limit=60' + clsPart,
-    base + '&order=total_ms.asc&limit=60' + clsPart,
+    base + ',rounds_total&game=eq.jiezhen&rounds_total=eq.' + ROUNDS.length + '&order=total_ms.asc&limit=500' + clsPart,
+    base + ',rounds_total&rounds_total=eq.' + ROUNDS.length + '&order=total_ms.asc&limit=500' + clsPart,
+    base + '&order=total_ms.asc&limit=500' + clsPart,
   ];
   for (let i = 0; i < tries.length; i++) {
     const r = await fetch(tries[i], { headers: { apikey: SB_KEY } });
@@ -1470,18 +1622,67 @@ async function fetchRank(cls) {
   throw new Error('HTTP 400 榜单列缺失');
 }
 
+const PAGE_SIZE = 10;
+const PAGER_OF = { rankList: 'rankPager', homeRank: 'homePager' };
+const rankPanels = new Map();
+
 function renderRank(el, rows, mask) {
-  const top = rows.slice(0, 10);
-  if (!top.length) { el.innerHTML = '<div class="rank-empty">还没有成绩，快去通关吧</div>'; return; }
-  el.innerHTML = top.map((r, i) => `
+  rankPanels.set(el.id, { rows, mask, page: 1 });
+  paintRank(el.id);
+}
+
+function paintRank(id) {
+  const st = rankPanels.get(id); if (!st) return;
+  const el = document.getElementById(id);
+  const pager = document.getElementById(PAGER_OF[id] || '');
+  const pages = Math.max(1, Math.ceil(st.rows.length / PAGE_SIZE));
+  st.page = Math.min(Math.max(1, st.page), pages);
+  if (!st.rows.length) {
+    el.innerHTML = '<div class="rank-empty">还没有成绩，快去通关吧</div>';
+    if (pager) pager.innerHTML = '';
+    return;
+  }
+  const start = (st.page - 1) * PAGE_SIZE;
+  const pageRows = st.rows.slice(start, start + PAGE_SIZE);
+  el.innerHTML = pageRows.map((r, i) => {
+    const no = start + i + 1;
+    return `
     <div class="rank-row">
-      <div class="rank-no top${i}">${i + 1}</div>
-      <div class="rank-name">${esc(mask ? maskName(r.player_name) : r.player_name)}</div>
+      <div class="rank-no${no <= 3 ? ' top' + (no - 1) : ''}">${no}</div>
+      <div class="rank-name">${esc(st.mask ? maskName(r.player_name) : r.player_name)}</div>
       <div class="rank-class">${esc(r.class_code)} 班</div>
       <div class="rank-clear">${r.rounds_total || ROUNDS.length} 关</div>
       <div class="rank-time">${fmt(r.total_ms)}</div>
       <div class="rank-date">${dateFull(r.created_at)}</div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
+  if (pager) {
+    pager.innerHTML = pagerHtml(pages, st.page, st.rows.length);
+    pager.querySelectorAll('button[data-pg]').forEach(b => {
+      b.onclick = () => { st.page = Number(b.dataset.pg); paintRank(id); };
+    });
+  }
+}
+
+function pagerHtml(pages, page, total) {
+  if (pages <= 1) return `<span class="pinfo">共 ${total} 条 · 1 页</span>`;
+  const nums = [];
+  if (pages <= 10) { for (let i = 1; i <= pages; i++) nums.push(i); }
+  else {
+    nums.push(1);
+    const s = Math.max(2, page - 2), e = Math.min(pages - 1, page + 2);
+    if (s > 2) nums.push('…');
+    for (let i = s; i <= e; i++) nums.push(i);
+    if (e < pages - 1) nums.push('…');
+    nums.push(pages);
+  }
+  const item = n => n === '…'
+    ? '<span class="dots">…</span>'
+    : `<button data-pg="${n}" class="${n === page ? 'on' : ''}">${n}</button>`;
+  return `<span class="pinfo">共 ${total} 条 · 第 ${page}/${pages} 页</span>`
+    + `<button data-pg="${page - 1}" ${page === 1 ? 'disabled' : ''}>上一页</button>`
+    + nums.map(item).join('')
+    + `<button data-pg="${page + 1}" ${page === pages ? 'disabled' : ''}>下一页</button>`;
 }
 
 let rankTab = 'all';
