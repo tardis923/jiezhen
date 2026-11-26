@@ -112,7 +112,8 @@
     position:absolute; left:50%; transform:translateX(-50%); bottom:0;
     display:flex; align-items:center; justify-content:center; pointer-events:none; z-index:4;
   }
-  canvas.hide-layout{filter:blur(12px) saturate(.55) brightness(.5);}
+  canvas.hide-layout{filter:blur(44px) saturate(.12) brightness(.3);}
+  canvas.mirror.hide-layout{filter:blur(40px) saturate(.1) brightness(.28);}
   .count{
     display:none; font-size:132px; font-weight:800; line-height:1; color:#ffd166;
     text-shadow:0 6px 26px #0009;
@@ -530,13 +531,19 @@ function transformPuzzle(puz, t, n) {
 // 颜色顺序打散：端点位置不变，只换颜色编号，难度不变
 function permuteColors(pairs, shift) {
   const k = pairs.length;
-  if (k < 2) return pairs;
+  if (!k) return pairs;
   const s = ((shift % k) + k) % k;
   return pairs.slice(s).concat(pairs.slice(0, s));
+}
+// 解法路径也要跟着换颜色顺序，否则提示线的颜色会和端点对不上
+function permuteSegs(segs, shift) {
+  if (!segs || !segs.length) return null;
+  return permuteColors(segs, shift);
 }
 const sigOf = pairs => pairs.flat().slice().sort((a, b) => a - b).join(',');
 
 // 一个关卡 = 一道基题 + 四种对称变体，四人布局不同、难度完全一致
+// 每副题带上生成时的解法（segs），供教师端按 H 显示提示；fallback 出题没有解法时给 null
 function buildRoundSet(k, n, rand, count) {
   for (let attempt = 0; attempt < 10; attempt++) {
     const base = genPuzzle(k, n, rand);
@@ -546,13 +553,15 @@ function buildRoundSet(k, n, rand, count) {
       const sig = sigOf(tp.pairs);
       if (sigs.has(sig)) continue;
       sigs.add(sig);
-      picks.push(permuteColors(tp.pairs, picks.length));
+      const shift = picks.length;
+      picks.push({ pairs: permuteColors(tp.pairs, shift), segs: permuteSegs(tp.segs, shift) });
     }
     if (picks.length >= count) return picks;
   }
   const base = genPuzzle(k, n, rand), out = [];
   for (let i = 0; i < count; i++) {
-    out.push(permuteColors(transformPuzzle(base, i % TRANSFORM_COUNT, n).pairs, i));
+    const tp = transformPuzzle(base, i % TRANSFORM_COUNT, n);
+    out.push({ pairs: permuteColors(tp.pairs, i), segs: permuteSegs(tp.segs, i) });
   }
   return out;
 }
@@ -670,7 +679,8 @@ const app = {
   started: false, t0: 0, raf: 0,
   phase: 'ready',         // ready（等四人就位）→ countdown（3 秒）→ play
   cdTimer: 0,             // 倒计时的 setTimeout 句柄
-  roundSets: null,        // 每关 4 副：四人布局各异、同对数、同难度
+  roundSets: null,        // 每关 4 副：四人布局各异、同对数、同难度（附参考解法 segs）
+  hintOn: false,          // 提示线开关（按 H 切换，默认关）
   players: [],
 };
 
@@ -832,7 +842,9 @@ function fitCanvas(p) {
 
 function loadRound(p, round) {
   const cfg = ROUNDS[round];
-  const pairs = app.roundSets[round][p.i];
+  const rs = app.roundSets[round][p.i];
+  const pairs = rs.pairs;
+  p.hintSegs = rs.segs || null;          // 本关参考解法（按 H 才显示，平时不出现）
   p.round = round;
   p.board = createBoard(pairs, cfg.n);
   p.cell = p.size / cfg.n;
@@ -862,6 +874,7 @@ function applyPhaseVisual() {
   app.players.forEach(p => {
     p.cover.style.display = prep ? '' : 'none';
     p.canvas.classList.toggle('hide-layout', prep);
+    p.mirror.classList.toggle('hide-layout', prep);   // 上方缩略棋盘同步模糊，防止开赛前从缩略视图看清题面
   });
 }
 
@@ -1057,7 +1070,7 @@ function updateBoardList() {
 
 // ---------- 绘制 ----------
 // 把整块棋面画到任意 ctx / 任意尺寸（主棋盘和上方镜像共用这一份逻辑）
-function paintBoard(ctx, s, b) {
+function paintBoard(ctx, s, b, hint) {
   const n = b.n, cell = s / n;
   ctx.clearRect(0, 0, s, s);
   ctx.fillStyle = '#0f1428';
@@ -1069,6 +1082,26 @@ function paintBoard(ctx, s, b) {
   for (let i = 1; i < n; i++) {
     ctx.beginPath(); ctx.moveTo(i * cell, 0); ctx.lineTo(i * cell, s); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(0, i * cell); ctx.lineTo(s, i * cell); ctx.stroke();
+  }
+
+  // 提示线（按 H 打开）：细虚线，压在玩家自己的实线下面
+  if (hint && hint.length) {
+    ctx.save();
+    ctx.globalAlpha = 0.5;
+    ctx.lineWidth = Math.max(1.5, cell * 0.13);
+    ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+    ctx.setLineDash([cell * 0.24, cell * 0.16]);
+    hint.forEach((sg, ci) => {
+      if (!sg || sg.length < 2) return;
+      ctx.strokeStyle = COLORS[ci % COLORS.length];
+      ctx.beginPath();
+      for (let j = 0; j < sg.length; j++) {
+        const x = (colOf(n, sg[j]) + 0.5) * cell, y = (rowOf(n, sg[j]) + 0.5) * cell;
+        j ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+      }
+      ctx.stroke();
+    });
+    ctx.restore();
   }
 
   // 线
@@ -1107,8 +1140,9 @@ function paintBoard(ctx, s, b) {
 }
 
 function draw(p) {
-  paintBoard(p.ctx, p.size, p.board);
-  if (p.mirrorSize) paintBoard(p.mctx, p.mirrorSize, p.board);   // 上方镜像同步
+  const hint = app.hintOn ? p.hintSegs : null;
+  paintBoard(p.ctx, p.size, p.board, hint);
+  if (p.mirrorSize) paintBoard(p.mctx, p.mirrorSize, p.board, hint);   // 上方镜像同步
   updateLines(p);          // 拖拽/回退都走 draw，这里同步"剩几格"
 }
 
@@ -1807,6 +1841,12 @@ window.addEventListener('keydown', e => {
       e.preventDefault();
       closeDemo();
     }
+    return;
+  }
+  if (e.code === 'KeyH') {                           // 教师用：按 H 显示/隐藏参考解法（淡色虚线）
+    e.preventDefault();
+    app.hintOn = !app.hintOn;
+    app.players.forEach(draw);
     return;
   }
   if (e.code === 'Space') {                          // 教师用：一键让四人都就位
