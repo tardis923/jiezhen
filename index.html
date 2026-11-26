@@ -220,7 +220,11 @@
   }
   .rank-no{ font-size:19px; font-weight:800; color:#8b93b8; text-align:center; }
   .rank-no.top0{ color:#ffd166; } .rank-no.top1{ color:#d8e2ff; } .rank-no.top2{ color:#ffb26b; }
-  .rank-name{ font-weight:800; color:#eaf1ff; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .rank-name{ font-weight:800; color:#eaf1ff; overflow:hidden; white-space:nowrap; display:flex; align-items:center; gap:8px; }
+  .rank-name .nm{ overflow:hidden; text-overflow:ellipsis; }
+  .taunt{ flex:0 0 auto; font-size:14px; font-weight:700; padding:2px 8px; border-radius:8px; letter-spacing:.5px; }
+  .taunt.lose{ color:#ff9aa2; background:#ff6b6b1f; border:1px solid #ff6b6b55; }
+  .taunt.win{ color:#ffd166; background:#ffd16622; border:1px solid #ffd16666; }
   .rank-class{ font-size:15px; color:#8b93b8; }
   .rank-clear{ font-size:15px; color:#8b93b8; text-align:center; }
   .rank-time{ font-variant-numeric:tabular-nums; font-weight:800; color:#9fd8ff; text-align:right; }
@@ -1433,6 +1437,39 @@ function uuid() {
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g,
   m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
 const maskName = n => { const s = String(n || ''); return s.length <= 1 ? (s || '—') : s[0] + '＊'; };
+
+// 老师的专属小尾巴：被超过时放狠话，守住第一时得意一下
+const TEACHER_NAME = '赵老师';
+// 每刷新一次页面，句子换一条
+const TAUNT_ROUND = (() => {
+  try {
+    const k = 'jz_taunt_round';
+    const n = (Number(sessionStorage.getItem(k)) || 0) + 1;
+    sessionStorage.setItem(k, n);
+    return n;
+  } catch (e) { return Math.floor(Date.now() / 1000); }
+})();
+const TAUNT_LOSE = [
+  '别得意，下周见',
+  '老师还没热身，等着',
+  '什么！居然有人超过我？！',
+  '手速不错，可惜路还长'
+];
+const TAUNT_WIN = [
+  '还是老师稳',
+  '第一名，无可争议',
+  '同学们，学着点',
+  '宝刀未老',
+  '这榜我先霸着',
+  '让让你们而已'
+];
+function teacherTag(name, rank, seed) {
+  if (String(name || '').trim() !== TEACHER_NAME) return '';
+  const list = rank === 1 ? TAUNT_WIN : TAUNT_LOSE;
+  // 每次刷新页面换一句：用 sessionStorage 计数，同一页面内重绘不变
+  const text = list[(TAUNT_ROUND + rank) % list.length];
+  return `<span class="taunt ${rank === 1 ? 'win' : 'lose'}">${text}</span>`;
+}
 function dateFull(s) {
   const d = new Date(s);
   if (isNaN(d)) return '';
@@ -1646,10 +1683,11 @@ function paintRank(id) {
   const pageRows = st.rows.slice(start, start + PAGE_SIZE);
   el.innerHTML = pageRows.map((r, i) => {
     const no = start + i + 1;
+    const shown = st.mask ? maskName(r.player_name) : r.player_name;
     return `
     <div class="rank-row">
       <div class="rank-no${no <= 3 ? ' top' + (no - 1) : ''}">${no}</div>
-      <div class="rank-name">${esc(st.mask ? maskName(r.player_name) : r.player_name)}</div>
+      <div class="rank-name"><span class="nm">${esc(shown)}</span>${st.mask ? '' : teacherTag(r.player_name, no, r.created_at)}</div>
       <div class="rank-class">${esc(r.class_code)} 班</div>
       <div class="rank-clear">${r.rounds_total || ROUNDS.length} 关</div>
       <div class="rank-time">${fmt(r.total_ms)}</div>
