@@ -711,19 +711,19 @@ function makePlayer(i) {
 
         <div class="count"></div>
         <div class="badge"></div>
-        <div class="namerow"><button class="pname name-slot">＋ 选姓名</button></div>
+        <div class="namerow"><button class="pname name-slot">选姓名</button></div>
       </div>
       <canvas class="board"></canvas>
-      <div class="cover"><button class="ready-btn">开始</button></div>
+      <div class="cover"><button class="ready-btn">点击准备</button></div>
       <div class="namepop">
-        <div class="namepop-head"><span>点自己的名字</span><button class="ghost namepop-x">关闭</button></div>
+        <div class="namepop-head"><span>选择自己的姓名</span><button class="ghost namepop-x">关闭</button></div>
         <div class="namepop-list"></div>
         <div class="namepop-pager">
           <button class="pg-prev">上一页</button>
           <span class="pg-info">第 1 / 1 页</span>
           <button class="pg-next">下一页</button>
         </div>
-        <div class="namepop-own"><input placeholder="没有我的名字？在这里打" maxlength="12"><button>确定</button></div>
+        <div class="namepop-own"><input placeholder="找不到？在这里输入" maxlength="12"><button>确定</button></div>
       </div>
     </div>`;
   boardsEl.appendChild(panel);
@@ -887,7 +887,7 @@ function resetPanel(p) {
   p.stage.classList.remove('cd');
   p.readyBtn.style.display = '';
   p.readyBtn.disabled = false;
-  p.readyBtn.textContent = '开始';
+  p.readyBtn.textContent = '点击准备';
   p.readyBtn.classList.remove('on');
   p.timeEl.className = 'time';
   p.timeEl.textContent = '00:00.0';
@@ -1484,10 +1484,10 @@ const TAUNT_ROUND = (() => {
   } catch (e) { return Math.floor(Date.now() / 1000); }
 })();
 const TAUNT_LOSE = [
-  '别得意，下周见',
-  '老师还没热身，等着',
+  '别得意，我会把我失去的夺回来！',
+  '我还没热身，等着瞧吧！',
   '什么！居然有人超过我？！',
-  '手速不错，可惜路还长'
+  '我还没有发挥全部实力~'
 ];
 const TAUNT_WIN = [
   '还是老师稳',
@@ -1495,7 +1495,7 @@ const TAUNT_WIN = [
   '同学们，学着点',
   '宝刀未老',
   '这榜我先霸着',
-  '让让你们而已'
+  '同学们，努努力呀'
 ];
 function teacherTag(name, rank, seed) {
   if (String(name || '').trim() !== TEACHER_NAME) return '';
