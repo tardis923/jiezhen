@@ -208,7 +208,7 @@
   .rank-pager .dots{ color:#6f78a0; font-size:15px; padding:0 2px; }
   .rank-pager .pinfo{ font-size:14px; color:#8b93b8; margin-right:4px; }
   .rank-head{
-    display:grid; grid-template-columns:44px 1fr 80px 76px 100px 172px; align-items:center; gap:8px;
+    display:grid; grid-template-columns:44px 1fr 80px 72px 150px 158px; align-items:center; gap:8px;
     padding:2px 12px 4px; font-size:13px; color:#7d86ac; letter-spacing:1px;
     border-bottom:1px solid #2a3358; margin-bottom:2px;
   }
@@ -216,7 +216,7 @@
   .rank-head div:nth-child(4){ text-align:center; }
   .rank-head div:nth-child(5), .rank-head div:nth-child(6){ text-align:right; }
   .rank-row{
-    display:grid; grid-template-columns:44px 1fr 80px 76px 100px 172px; align-items:center; gap:8px;
+    display:grid; grid-template-columns:44px 1fr 80px 72px 150px 158px; align-items:center; gap:8px;
     padding:9px 12px; border-radius:12px; background:#1a2140; border:1px solid #2a3358; font-size:18px;
   }
   .rank-no{ font-size:19px; font-weight:800; color:#8b93b8; text-align:center; }
@@ -989,6 +989,16 @@ function fmt(ms) {
   return String(m).padStart(2, '0') + ':' + (s < 10 ? '0' : '') + s.toFixed(1);
 }
 
+// 榜单专用：精确到毫秒，形如「1分15秒432毫秒」
+function fmtPrecise(ms) {
+  const t = Math.max(0, Math.round(ms));
+  const m = Math.floor(t / 60000);
+  const s = Math.floor((t % 60000) / 1000);
+  const q = t % 1000;
+  return m + '分' + s + '秒' + String(q).padStart(3, '0') + '毫秒';
+}
+
+
 function cellFromEvent(p, e) {
   const n = p.board.n;
   const r = p.canvas.getBoundingClientRect();
@@ -1724,7 +1734,7 @@ function paintRank(id) {
       <div class="rank-name"><span class="nm">${esc(shown)}</span>${st.mask ? '' : teacherTag(r.player_name, no, r.created_at)}</div>
       <div class="rank-class">${esc(r.class_code)} 班</div>
       <div class="rank-clear">${r.rounds_total || ROUNDS.length} 关</div>
-      <div class="rank-time">${fmt(r.total_ms)}</div>
+      <div class="rank-time">${fmtPrecise(r.total_ms)}</div>
       <div class="rank-date">${dateFull(r.created_at)}</div>
     </div>`;
   }).join('');
