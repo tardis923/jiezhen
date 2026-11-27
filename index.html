@@ -208,15 +208,15 @@
   .rank-pager .dots{ color:#6f78a0; font-size:15px; padding:0 2px; }
   .rank-pager .pinfo{ font-size:14px; color:#8b93b8; margin-right:4px; }
   .rank-head{
-    display:grid; grid-template-columns:44px 1fr 80px 72px 150px 158px; align-items:center; gap:8px;
+    display:grid; grid-template-columns:44px 1fr 96px 72px 68px 150px 158px; align-items:center; gap:8px;
     padding:2px 12px 4px; font-size:13px; color:#7d86ac; letter-spacing:1px;
     border-bottom:1px solid #2a3358; margin-bottom:2px;
   }
   .rank-head div:nth-child(3){ padding-left:2px; }
-  .rank-head div:nth-child(4){ text-align:center; }
-  .rank-head div:nth-child(5), .rank-head div:nth-child(6){ text-align:right; }
+  .rank-head div:nth-child(4), .rank-head div:nth-child(5){ text-align:center; }
+  .rank-head div:nth-child(6), .rank-head div:nth-child(7){ text-align:right; }
   .rank-row{
-    display:grid; grid-template-columns:44px 1fr 80px 72px 150px 158px; align-items:center; gap:8px;
+    display:grid; grid-template-columns:44px 1fr 96px 72px 68px 150px 158px; align-items:center; gap:8px;
     padding:9px 12px; border-radius:12px; background:#1a2140; border:1px solid #2a3358; font-size:18px;
   }
   .rank-no{ font-size:19px; font-weight:800; color:#8b93b8; text-align:center; }
@@ -228,6 +228,8 @@
   .taunt.win{ color:#ffd166; background:#ffd16622; border:1px solid #ffd16666; }
   .rank-class{ font-size:15px; color:#8b93b8; }
   .rank-clear{ font-size:15px; color:#8b93b8; text-align:center; }
+  .rank-runs{ font-size:15px; color:#8b93b8; text-align:center; font-variant-numeric:tabular-nums; }
+  .rank-class{ font-size:15px; color:#8b93b8; text-align:center; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .rank-time{ font-variant-numeric:tabular-nums; font-weight:800; color:#9fd8ff; text-align:right; }
   .rank-date{ font-size:14px; color:#8b93b8; text-align:right; font-variant-numeric:tabular-nums; }
   .rank-empty{ padding:40px 10px; text-align:center; font-size:17px; color:#6f78a0; }
@@ -238,14 +240,17 @@
   }
   #boardLayer.show, #nameLayer.show{ display:flex; }
   .board-box, .name-box{
-    display:flex; flex-direction:column; gap:12px; width:min(920px,92vw); max-height:88vh;
+    display:flex; flex-direction:column; gap:12px; width:min(1060px,94vw); max-height:88vh;
     padding:18px 22px 16px; border-radius:22px; background:linear-gradient(180deg,#1c2549,#141a30);
     border:1px solid #3f4d80; box-shadow:0 26px 70px #000c;
   }
   .board-box h3, .name-box h3{ margin:0; font-size:24px; letter-spacing:3px; color:#dfe8ff; }
-  .rank-tabs{ display:flex; gap:10px; }
+  /* 弹窗要盖在首页入口层之上 */
+  #boardLayer, #nameLayer{ z-index:70; }
+  .rank-tabs{ display:flex; gap:10px; flex-wrap:wrap; }
   .rank-tabs button{ font-size:15px; padding:7px 16px; border-radius:10px; }
   .rank-tabs button.on{ background:linear-gradient(180deg,#3f7fe0,#2a5cb8); border-color:#6ea8ff; }
+  .rank-tabs button.empty{ opacity:.45; border-style:dashed; }
   .board-foot{ display:flex; align-items:center; gap:10px; }
   .board-foot span{ flex:1; font-size:13px; color:#6f78a0; }
   .name-box textarea{
@@ -313,10 +318,9 @@
     <h3>排行榜 · 全部名次</h3>
     <div class="rank-tabs" id="rankTabs">
       <button data-tab="all" class="on">全部班级</button>
-      <button data-tab="cls" class="game-only">本班</button>
     </div>
     <div class="rank-head">
-      <div>名次</div><div>姓名</div><div>班级</div><div>通关关数</div><div>通关时间</div><div>通关日期</div>
+      <div>名次</div><div>姓名</div><div>班级</div><div>通关关数</div><div>通关次数</div><div>最好成绩</div><div>日期</div>
     </div>
     <div class="rank-list" id="rankList"></div>
     <div class="rank-pager" id="rankPager"></div>
@@ -350,7 +354,7 @@
       <button id="btnEnter" class="primary">进入本班</button>
     </div>
     <div class="rank-head">
-      <div>名次</div><div>姓名</div><div>班级</div><div>通关关数</div><div>通关时间</div><div>通关日期</div>
+      <div>名次</div><div>姓名</div><div>班级</div><div>通关关数</div><div>通关次数</div><div>最好成绩</div><div>通关日期</div>
     </div>
     <div class="rank-list" id="homeRank"></div>
     <div class="rank-pager" id="homePager"></div>
@@ -989,7 +993,7 @@ function fmt(ms) {
   return String(m).padStart(2, '0') + ':' + (s < 10 ? '0' : '') + s.toFixed(1);
 }
 
-// 榜单专用：精确到毫秒，形如「1分15秒432毫秒」
+// 榜单专用：精确到毫秒，形如「1分15秒749毫秒」
 function fmtPrecise(ms) {
   const t = Math.max(0, Math.round(ms));
   const m = Math.floor(t / 60000);
@@ -997,7 +1001,6 @@ function fmtPrecise(ms) {
   const q = t % 1000;
   return m + '分' + s + '秒' + String(q).padStart(3, '0') + '毫秒';
 }
-
 
 function cellFromEvent(p, e) {
   const n = p.board.n;
@@ -1682,6 +1685,28 @@ async function uploadScore(p) {
 }
 
 // ---------- 榜单 ----------
+// 每人通关次数：leaderboard 视图是“每人只留最快一条”，数不到次数，所以另读 scores 原始表
+async function fetchRuns() {
+  const map = new Map();
+  try {
+    const base = SB_URL + '/scores?select=class_code,player_name&game=eq.jiezhen&rounds_total=eq.'
+      + ROUNDS.length + '&limit=1000';
+    let offset = 0;
+    for (let page = 0; page < 5; page++) {
+      const r = await fetch(base + '&offset=' + offset, { headers: { apikey: SB_KEY } });
+      if (!r.ok) break;
+      const list = await r.json();
+      list.forEach(x => {
+        const k = (x.class_code || '').trim() + '|' + x.player_name;
+        map.set(k, (map.get(k) || 0) + 1);
+      });
+      if (list.length < 1000) break;
+      offset += 1000;
+    }
+  } catch (e) { /* 次数拿不到也不影响榜单本身 */ }
+  return map;
+}
+
 // 只统计“当前关数”这一版的成绩：以后加关卡，旧成绩不会和新成绩混排
 async function fetchRank(cls) {
   const base = SB_URL + '/leaderboard?select=class_code,player_name,total_ms,created_at';
@@ -1694,7 +1719,12 @@ async function fetchRank(cls) {
   ];
   for (let i = 0; i < tries.length; i++) {
     const r = await fetch(tries[i], { headers: { apikey: SB_KEY } });
-    if (r.ok) return r.json();
+    if (r.ok) {
+      const rows = await r.json();
+      const runs = await fetchRuns();
+      rows.forEach(x => { x.runs = runs.get((x.class_code || '').trim() + '|' + x.player_name) || 1; });
+      return rows;
+    }
     const body = await r.text().catch(() => '');
     // 只有“列不存在”才降级，其它错误照常抛给上层提示
     if (!/42703|PGRST204|does not exist|Could not find/.test(body)) throw new Error('HTTP ' + r.status);
@@ -1707,24 +1737,64 @@ const PAGE_SIZE = 10;
 const PAGER_OF = { rankList: 'rankPager', homeRank: 'homePager' };
 const rankPanels = new Map();
 
+// 班级清单：三～六年级，每年级 1、2 班；没成绩的班也显示标签（淡色）
+const CLASS_LIST = ['三（1）','三（2）','四（1）','四（2）','五（1）','五（2）','六（1）'];
+// 这些班不进排行榜（老师自测用）
+const CLASS_HIDDEN = ['vip'];
+
 function renderRank(el, rows, mask) {
-  rankPanels.set(el.id, { rows, mask, page: 1 });
+  const prev = rankPanels.get(el.id);
+  let tab = prev ? prev.tab : 'all';
+  // 当前标签的班没成绩了（比如换了一批人），自动退回“全部班级”
+  if (tab !== 'all' && !rows.some(r => (r.class_code || '').trim() === tab)) tab = 'all';
+  rankPanels.set(el.id, { rows, mask, page: 1, tab });
+  if (el.id === 'rankList') paintRankTabs(rows);
   paintRank(el.id);
+}
+
+// 当前标签对应的成绩（全部班级 / 某一个班）
+function tabRows(st) {
+  return (st.tab && st.tab !== 'all')
+    ? st.rows.filter(r => (r.class_code || '').trim() === st.tab)
+    : st.rows;
+}
+
+// 班级标签：从成绩里自动生成本次有成绩的班级，点一下就只看这个班
+const NATSORT = (a, b) => a.localeCompare(b, 'zh-Hans-CN', { numeric: true });
+function paintRankTabs(rows) {
+  const codes = [...new Set(rows.map(r => (r.class_code || '').trim()).filter(Boolean))]
+    .filter(c => !CLASS_HIDDEN.includes(c)).sort(NATSORT);
+  // 清单里的班固定出现；清单外有成绩的班（如旧链接 701）也补进来
+  const list = [...CLASS_LIST, ...codes.filter(c => !CLASS_LIST.includes(c))];
+  rankTabsEl.innerHTML = '<button data-tab="all"' + (rankTab === 'all' ? ' class="on"' : '') + '>全部班级</button>'
+    + list.map(c => '<button data-tab="' + esc(c) + '" class="'
+        + (rankTab === c ? 'on' : '') + (codes.includes(c) ? '' : 'empty')
+        + '">' + esc(c) + '</button>').join('');
+}
+
+function updateRankNote() {
+  const st = rankPanels.get('rankList'); if (!st) return;
+  const n = tabRows(st).length;
+  rankNoteEl.textContent = '共 ' + n + ' 条成绩' + (st.tab === 'all' ? '' : '（' + st.tab + ' 班）') + ' · 每人只取最好成绩';
 }
 
 function paintRank(id) {
   const st = rankPanels.get(id); if (!st) return;
   const el = document.getElementById(id);
   const pager = document.getElementById(PAGER_OF[id] || '');
-  const pages = Math.max(1, Math.ceil(st.rows.length / PAGE_SIZE));
+  // 标题跟着标签走：全部名次 / 703 班
+  const titleEl = document.querySelector('#boardLayer h3');
+  if (titleEl && id === 'rankList') titleEl.textContent = '排行榜 · ' + (st.tab && st.tab !== 'all' ? st.tab + ' 班' : '全部名次');
+  const rows = tabRows(st);
+  const pages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
   st.page = Math.min(Math.max(1, st.page), pages);
-  if (!st.rows.length) {
+  if (!rows.length) {
     el.innerHTML = '<div class="rank-empty">还没有成绩，快去通关吧</div>';
     if (pager) pager.innerHTML = '';
     return;
   }
   const start = (st.page - 1) * PAGE_SIZE;
-  const pageRows = st.rows.slice(start, start + PAGE_SIZE);
+  const pageRows = rows.slice(start, start + PAGE_SIZE);
   el.innerHTML = pageRows.map((r, i) => {
     const no = start + i + 1;
     const shown = st.mask ? maskName(r.player_name) : r.player_name;
@@ -1734,12 +1804,13 @@ function paintRank(id) {
       <div class="rank-name"><span class="nm">${esc(shown)}</span>${st.mask ? '' : teacherTag(r.player_name, no, r.created_at)}</div>
       <div class="rank-class">${esc(r.class_code)} 班</div>
       <div class="rank-clear">${r.rounds_total || ROUNDS.length} 关</div>
+      <div class="rank-runs">${r.runs || 1} 次</div>
       <div class="rank-time">${fmtPrecise(r.total_ms)}</div>
       <div class="rank-date">${dateFull(r.created_at)}</div>
     </div>`;
   }).join('');
   if (pager) {
-    pager.innerHTML = pagerHtml(pages, st.page, st.rows.length);
+    pager.innerHTML = pagerHtml(pages, st.page, rows.length);
     pager.querySelectorAll('button[data-pg]').forEach(b => {
       b.onclick = () => { st.page = Number(b.dataset.pg); paintRank(id); };
     });
@@ -1771,21 +1842,23 @@ let rankTab = 'all';
 btnRank.onclick = () => { boardLayer.classList.add('show'); refreshRank(); };
 document.getElementById('rankClose').onclick = () => boardLayer.classList.remove('show');
 document.getElementById('rankRefresh').onclick = refreshRank;
-rankTabsEl.querySelectorAll('button').forEach(b => {
-  b.onclick = () => {
-    if (b.dataset.tab === 'cls' && !CLASS_CODE) return;
-    rankTab = b.dataset.tab;
-    rankTabsEl.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
-    refreshRank();
-  };
+rankTabsEl.addEventListener('click', e => {
+  const b = e.target.closest('button[data-tab]');
+  if (!b) return;
+  rankTab = b.dataset.tab;
+  const st = rankPanels.get('rankList');
+  if (st) { st.tab = rankTab; st.page = 1; paintRank('rankList'); }
+  rankTabsEl.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
+  updateRankNote();
 });
 
 async function refreshRank() {
   rankNoteEl.textContent = '读取中…';
   try {
-    const rows = await fetchRank(rankTab === 'cls' && CLASS_CODE ? CLASS_CODE : '');
+    // 一次取全量，切班级标签在前端过滤，不用等网络
+    const rows = await fetchRank('');
     renderRank(rankListEl, rows, !CLASS_CODE);
-    rankNoteEl.textContent = '共 ' + rows.length + ' 条成绩 · 每人只取最快一次';
+    updateRankNote();
   } catch (e) {
     rankListEl.innerHTML = '<div class="rank-empty">读取失败，检查一下网络</div>';
     rankNoteEl.textContent = '';
@@ -1878,3 +1951,4 @@ app.players.forEach(p => setTimeout(() => fitCanvas(p), 0));
 </script>
 </body>
 </html>
+
